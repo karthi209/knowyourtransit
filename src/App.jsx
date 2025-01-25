@@ -25,27 +25,27 @@ const App = () => {
 
   // State to manage the visibility of lines
   const [visibleLines, setVisibleLines] = useState({
-    "Blue Line": true,
-    "Green Line": true,
-    "Red Line": true,
-    "Orange Line": true,
-    "Purple Line": true,
-    "North Line": true,
-    "South Line": true,
-    "West Line": true,
-    "MRTS": true,
+    "BlueLine": true,
+    "GreenLine": true,
+    "RedLine": true,
+    "OrangeLine": true,
+    "PurpleLine": true,
+    "NorthLine": true,
+    "SouthLine": true,
+    "WestLine": true,
+    "MRTSLine": true,
   });
 
   const lineColors = {
-    "Blue Line": "#3280c3",
-    "Green Line": "#52b747",
-    "Red Line": "#e50000",
-    "Orange Line": "#f76300",
-    "Purple Line": "#790079",
-    "MRTS": "#008080",
-    "South Line": "#a9a9a9",
-    "West Line": "#0ddd22",
-    "North Line": "#a0522d",
+    "BlueLine": "#3280c3",
+    "GreenLine": "#52b747",
+    "RedLine": "#e50000",
+    "OrangeLine": "#f76300",
+    "PurpleLine": "#790079",
+    "MRTSLine": "#008080",
+    "SouthLine": "#a9a9a9",
+    "WestLine": "#0ddd22",
+    "NorthLine": "#a0522d",
   };
 
   // State to manage dropdown visibility
@@ -58,9 +58,9 @@ const App = () => {
 
   // Define group-to-line mapping
   const layerGroups = {
-    Metro: ["Blue Line", "Green Line", "Red Line", "Orange Line", "Purple Line"],
-    Suburban: ["North Line", "South Line", "West Line"],
-    MRTS: ["MRTS"],
+    Metro: ["BlueLine", "GreenLine", "RedLine", "OrangeLine", "PurpleLine"],
+    Suburban: ["NorthLine", "SouthLine", "WestLine"],
+    MRTS: ["MRTSLine"],
     MTC: [], // No lines for MTC yet
   };
 
@@ -97,11 +97,11 @@ const App = () => {
         const map = mapInstanceRef.current;
         const zoomLevel = map.getView().getZoom();
         const radius = 2 + (zoomLevel - 10) * 0.5;
-    
+
         const associatedLines = feature.get("lines"); // Array of line names associated with the station
         const baseColor = "red"; // Default station color
         const stationPosition = feature.getGeometry().getCoordinates();
-    
+
         if (associatedLines && associatedLines.length > 1) {
           // Offset logic for overlapping stations
           const angleStep = (2 * Math.PI) / associatedLines.length;
@@ -109,12 +109,12 @@ const App = () => {
             const angle = index * angleStep;
             const offsetX = Math.cos(angle) * 5; // Adjust offset size
             const offsetY = Math.sin(angle) * 5;
-    
+
             const offsetPosition = [
               stationPosition[0] + offsetX,
               stationPosition[1] + offsetY,
             ];
-    
+
             return new Style({
               image: new Circle({
                 radius: radius,
@@ -124,10 +124,10 @@ const App = () => {
               geometry: new Point(offsetPosition), // Apply offset
             });
           });
-    
+
           return styles;
         }
-    
+
         return new Style({
           image: new Circle({
             radius: radius,
@@ -137,7 +137,6 @@ const App = () => {
         });
       },
     });
-    
 
     const stationPopup = new Overlay({
       element: stationPopupRef.current,
@@ -156,7 +155,8 @@ const App = () => {
         maxZoom: 22,
       }),
       overlays: [stationPopup],
-      pixelRatio: 2,
+      pixelRatio: 2, // Increase pixel ratio for crisper rendering
+      renderer: 'canvas', // Ensure anti-aliasing is enabled
     });
 
     mapInstanceRef.current = map;
@@ -170,42 +170,37 @@ const App = () => {
   useEffect(() => {
     const map = mapInstanceRef.current;
     if (!map) return;
-  
+
     const vtLayer = map.getLayers().getArray().find((layer) => layer instanceof VectorTileLayer);
     if (vtLayer) {
       vtLayer.setStyle((feature) => getFeatureStyle(feature));
     }
   }, [visibleLines]);
-  
 
   // Function to generate styles dynamically
   const getFeatureStyle = (feature) => {
-
-    console.log("Feature:", feature);
-    console.log("Feature Name:", feature.get("Name"));
-
-    const lineName = feature.get("Name");
-    const lineColor = lineColors[lineName] || "gray";
-
+    const lineName = feature.get("Name"); // Ensure this matches the property in your data
+    const lineColor = lineColors[lineName] || "gray"; // Fallback to gray if lineName is not found
+  
     // Hide the line if it's not visible
     if (!visibleLines[lineName]) {
-      return null;// Empty style
+      return null; // Return null to hide the feature
     }
-
+  
     const map = mapInstanceRef.current;
     const zoomLevel = map.getView().getZoom();
     const baseWidth = 1.5;
     const zoomFactor = 0.6;
     const dynamicWidth = Math.max(baseWidth + (zoomLevel - 10) * zoomFactor, 1);
-
+  
     // Add offset based on line order (use feature attributes or a custom order)
     const lineOrder = feature.get("Order") || 0; // Example attribute to determine order
     const offsetFactor = 2; // Adjust for space between lines
     const dynamicOffset = offsetFactor * lineOrder;
-
+  
     return new Style({
       stroke: new Stroke({
-        color: lineColor,
+        color: lineColor, // Apply the resolved color
         width: dynamicWidth,
         lineCap: "round",
         lineJoin: "round",

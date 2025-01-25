@@ -15,6 +15,8 @@ import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
 import { Point } from "ol/geom";
 import { getCenter } from "ol/extent";
+import Select from "ol/interaction/Select";
+import { pointerMove } from "ol/events/condition";
 
 const App = () => {
   const mapContainerRef = useRef(null);
@@ -78,6 +80,7 @@ const App = () => {
         format: new MVT(),
         url: "http://localhost:8000/tiles/lines/{z}/{x}/{y}.mvt",
         overlaps: false,
+        tilePixelRatio: 2,
       }),
       transition: 0,
       renderBuffer: 200,
@@ -153,11 +156,90 @@ const App = () => {
         zoom: 11,
         minZoom: 11,
         maxZoom: 22,
+        // constrainResolution: true,
       }),
       overlays: [stationPopup],
       pixelRatio: 2, // Increase pixel ratio for crisper rendering
       renderer: 'canvas', // Ensure anti-aliasing is enabled
     });
+
+    // Set the default cursor to hand (grab)
+    map.getTargetElement().style.cursor = 'grab';
+
+    // Modify the select interaction setup
+    const select = new Select({
+      condition: pointerMove,
+    });
+
+    select.on("select", (e) => {
+      if (e.selected.length > 0) {
+        map.getTargetElement().style.cursor = 'pointer';
+      } else {
+        map.getTargetElement().style.cursor = 'grab';
+      }
+    });
+
+    // Track whether we're on a feature
+    let isOnFeature = false;
+
+    map.on('pointermove', (e) => {
+      const feature = map.forEachFeatureAtPixel(e.pixel, (feature) => feature);
+      isOnFeature = !!feature;
+      map.getTargetElement().style.cursor = feature ? 'pointer' : 'grab';
+    });
+
+    // Add click event listener for features
+    map.on('click', (e) => {
+      const feature = map.forEachFeatureAtPixel(e.pixel, (feature) => feature);
+      
+      if (feature) {
+        // Simple CSS-based pulse animation
+        const overlay = document.createElement('div');
+        overlay.style.position = 'absolute';
+        overlay.style.pointerEvents = 'none';
+        overlay.style.borderRadius = '50%';
+        overlay.style.background = 'rgba(0,0,0,0.2)';
+        overlay.style.animation = 'pulse 0.5s ease-out';
+        
+        // Position the overlay at the clicked point
+        const pixel = e.pixel;
+        overlay.style.left = `${pixel[0]}px`;
+        overlay.style.top = `${pixel[1]}px`;
+        
+        // Add keyframe animation
+        const style = document.createElement('style');
+        style.textContent = `
+          @keyframes pulse {
+            0% { transform: scale(0); opacity: 1; width: 0; height: 0; }
+            100% { transform: scale(3); opacity: 0; width: 20px; height: 20px; }
+          }
+        `;
+        
+        document.body.appendChild(style);
+        map.getTargetElement().appendChild(overlay);
+        
+        // Remove overlay after animation
+        setTimeout(() => {
+          document.body.removeChild(style);
+          map.getTargetElement().removeChild(overlay);
+        }, 500);
+      }
+    });
+
+    map.on('pointerdown', (e) => {
+      const feature = map.forEachFeatureAtPixel(e.pixel, (feature) => feature);
+      map.getTargetElement().style.cursor = isOnFeature ? 'pointer' : 'grabbing';
+    });
+
+    map.on('pointerdrag', () => {
+      map.getTargetElement().style.cursor = 'grabbing';
+    });
+
+    map.on('pointerup', () => {
+      map.getTargetElement().style.cursor = isOnFeature ? 'pointer' : 'grab';
+    });
+
+    map.addInteraction(select);
 
     mapInstanceRef.current = map;
 
@@ -271,63 +353,37 @@ const App = () => {
             >
               {groupName} {dropdowns[groupName] ? "▼" : "▶"}
             </h6>
+
+            {/* Layer Toggles */}
             {dropdowns[groupName] && (
-              <div style={{ paddingLeft: "15px" }}>
-                {/* Group Checkbox */}
-                <label style={{ display: "block", marginBottom: "10px" }}>
+              <div style={{ marginLeft: "20px" }}>
+                <label style={{ display: "block" }}>
                   <input
                     type="checkbox"
                     checked={layerGroups[groupName].every(
                       (lineName) => visibleLines[lineName]
                     )}
                     onChange={() => toggleGroupVisibility(groupName)}
-                    style={{ marginRight: "8px" }}
                   />
-                  <strong>Toggle All {groupName}</strong>
+                  {groupName}
                 </label>
 
-                {/* Individual Line Checkboxes */}
-                <ul style={{ listStyle: "none", padding: "0" }}>
-                  {layerGroups[groupName].map((lineName) => (
-                    <li key={lineName} style={{ marginBottom: "8px" }}>
-                      <label>
-                        <input
-                          type="checkbox"
-                          checked={visibleLines[lineName]}
-                          onChange={() => toggleLineVisibility(lineName)}
-                          style={{ marginRight: "8px" }}
-                        />
-                        <span
-                          style={{
-                            color: lineColors[lineName],
-                            fontWeight: "bold",
-                          }}
-                        >
-                          {lineName}
-                        </span>
-                      </label>
-                    </li>
-                  ))}
-                </ul>
+                {/* Individual Line Toggles */}
+                {layerGroups[groupName].map((lineName) => (
+                  <label key={lineName} style={{ display: "block" }}>
+                    <input
+                      type="checkbox"
+                      checked={visibleLines[lineName]}
+                      onChange={() => toggleLineVisibility(lineName)}
+                    />
+                    {lineName}
+                  </label>
+                ))}
               </div>
             )}
           </div>
         ))}
       </div>
-
-      {/* Popup container */}
-      <div
-        ref={stationPopupRef}
-        className="station-popup"
-        style={{
-          position: "absolute",
-          background: "white",
-          padding: "10px",
-          border: "1px solid #ccc",
-          borderRadius: "5px",
-          boxShadow: "0 2px 5px rgba(0,0,0,0.3)",
-        }}
-      />
     </div>
   );
 };

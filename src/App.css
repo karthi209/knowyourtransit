@@ -1,0 +1,83 @@
+#root {
+  text-align: center;
+}
+
+.custom-zoom-control {
+  position: absolute;
+  top: 75px; /* Adjust the top position to place it below the Locate Me button */
+  right: 2.3%; /* Align it to the right side */
+  width: "50px";
+  z-index: 1000; /* Ensure it is above other elements */
+  display: flex;
+  flex-direction: column; /* Stack the buttons vertically */
+  background-color: white;
+  border: 1px solid #ccc;
+  border-radius: 25px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  height: "50px";
+  justify-content: "center";
+  align-items: "center";
+  border-radius: "50%";
+}
+
+.custom-zoom-control button:hover {
+  background-color: #f0f0f0;
+}
+
+.md3-search-button {
+  font-size: 20px;  /* Adjust the font size of the icon */
+  padding: 7px;    /* Adjust padding for better size */
+  padding-top: 7px;
+  padding-bottom: 2px;
+  color: white;   /* Set a color matching your theme */
+  background-color: #282828; /* Transparent background */
+  border: none;     /* Remove border */
+  box-shadow: none; /* Remove shadow for MD3 style */
+  border-radius: 25px;
+  margin-left: 10px;
+}
+
+.md3-search-button:hover {
+  color: white;
+  background-color: #515151;
+}
+
+/* Material Design Offcanvas Styling */
+.custom-offcanvas {
+  background-color: #ffffff; /* Neutral white background */
+  box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1); /* Subtle elevation */
+  border-radius: 12px; /* Rounded corners */
+}
+
+/* Hamburger Menu Button */
+.material-hamburger-button {
+  font-size: 24px;
+  padding: 8px;
+  border-radius: 50%;
+  background-color: #ffffff; /* White background for contrast */
+  border: none;
+  box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.2); /* Slight shadow */
+  transition: background-color 0.3s ease;
+}
+
+.material-hamburger-button:hover {
+  background-color: #f0f0f0; /* Hover effect */
+}
+
+/* Offcanvas List Items */
+.custom-list-item {
+  font-size: 16px;
+  font-weight: 500; /* Medium font for hierarchy */
+  color: #333333; /* Dark text color */
+  border: none;
+  padding: 12px 16px;
+  transition: background-color 0.3s ease, color 0.3s ease;
+  cursor: pointer;
+}
+
+.custom-list-item:hover {
+  background-color: #e0f7fa; /* Hover background color */
+  color: #00796b; /* Accent color */
+}
+

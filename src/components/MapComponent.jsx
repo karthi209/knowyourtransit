@@ -10,7 +10,7 @@ import { fromLonLat } from "ol/proj";
 import GeoJSON from "ol/format/GeoJSON";
 import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
-import { Style, Fill, Stroke, Circle } from "ol/style";
+import { Style, Fill, Stroke, Circle as CircleStyle } from "ol/style";
 import { Point } from "ol/geom";
 import { getFeatureStyle, lineColors } from "./styles";
 import StationPopup from "./StationPopup";
@@ -22,6 +22,7 @@ const MapComponent = ({ setSelectedStation, setSelectedLine, visibleLines }) => 
   const mapInstanceRef = useRef(null);
   const stationPopupRef = useRef(null);
   const overlayRef = useRef(null);
+  const [highlightedFeature, setHighlightedFeature] = useState(null);
 
   useEffect(() => {
     if (mapInstanceRef.current) return;
@@ -59,7 +60,7 @@ const MapComponent = ({ setSelectedStation, setSelectedLine, visibleLines }) => 
 
         if (!associatedLines.length) {
           return new Style({
-            image: new Circle({
+            image: new CircleStyle({
               radius: radius,
               fill: new Fill({ color: "red" }),
               stroke: new Stroke({ color: "white", width: 1 }),
@@ -74,7 +75,7 @@ const MapComponent = ({ setSelectedStation, setSelectedLine, visibleLines }) => 
           const offset = 5;
 
           return new Style({
-            image: new Circle({
+            image: new CircleStyle({
               radius: radius,
               fill: new Fill({ color: lineColors[line] || "red" }),
               stroke: new Stroke({ color: "white", width: 1 }),
@@ -114,17 +115,37 @@ const MapComponent = ({ setSelectedStation, setSelectedLine, visibleLines }) => 
       renderer: "canvas",
     });
 
-    // Add cursor change logic
-    let isOnFeature = false;
+    const highlightStyle = (originalStyle) => new Style({
+      image: new CircleStyle({
+        radius: originalStyle.getImage().getRadius() * 1.2,
+        fill: originalStyle.getImage().getFill(),
+        stroke: originalStyle.getImage().getStroke(),
+      }),
+    });
 
     map.on("pointermove", (e) => {
-      const feature = map.forEachFeatureAtPixel(e.pixel, (feature) => feature);
-      isOnFeature = !!feature;
-      map.getTargetElement().style.cursor = isOnFeature ? "pointer" : "grab";
+      map.getTargetElement().style.cursor = '';
+
+      if (highlightedFeature) {
+        highlightedFeature.setStyle(highlightedFeature.get('originalStyle'));
+        setHighlightedFeature(null);
+      }
+
+      map.forEachFeatureAtPixel(e.pixel, (feature) => {
+        if (feature.get("name")) {
+          map.getTargetElement().style.cursor = 'pointer';
+          if (!feature.get('originalStyle')) {
+            feature.set('originalStyle', feature.getStyle());
+          }
+          feature.setStyle(highlightStyle(feature.get('originalStyle')));
+          setHighlightedFeature(feature);
+          return true;
+        }
+      });
     });
 
     map.on("pointerdown", () => {
-      map.getTargetElement().style.cursor = isOnFeature ? "pointer" : "grabbing";
+      map.getTargetElement().style.cursor = "grabbing";
     });
 
     map.on("pointerdrag", () => {
@@ -132,7 +153,7 @@ const MapComponent = ({ setSelectedStation, setSelectedLine, visibleLines }) => 
     });
 
     map.on("pointerup", () => {
-      map.getTargetElement().style.cursor = isOnFeature ? "pointer" : "grab";
+      map.getTargetElement().style.cursor = "grab";
     });
 
     map.on("click", (e) => {

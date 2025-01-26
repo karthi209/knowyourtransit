@@ -10,8 +10,8 @@ const StationPopup = ({ selectedStation }) => {
         padding: "15px",
         borderRadius: "8px",
         boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
-        minWidth: "200px",
-        maxWidth: "300px",
+        minWidth: "150px",
+        maxWidth: "200px",
         zIndex: 1000,
         pointerEvents: "auto",
       }}
@@ -20,8 +20,8 @@ const StationPopup = ({ selectedStation }) => {
       {selectedStation && (
         <div>
           <h3>{selectedStation.name}</h3>
-          <p>Network: {selectedStation.network}</p>
-          <p>Lines: {selectedStation.lines.join(", ")}</p>
+          <p>{selectedStation.name_ta}</p>
+          <p>{selectedStation.network}</p>
         </div>
       )}
     </div>

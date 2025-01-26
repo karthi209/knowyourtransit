@@ -1,10 +1,10 @@
 import React, { useState } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "ol/ol.css";
-import MapComponent from "./MapComponent";
-import StationPopup from "./StationPopup";
-import LayerControl from "./LayerControl";
-import LineDetails from "./LineDetails";
+import MapComponent from "./components/MapComponent";
+import StationPopup from "./components/StationPopup";
+import LayerControl from "./components/LayerControl";
+import LineDetails from "./components/LineDetails";
 
 const App = () => {
   const [selectedStation, setSelectedStation] = useState(null);

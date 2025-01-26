@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import { Map, View } from "ol";
 import VectorTileLayer from "ol/layer/VectorTile";
 import VectorTileSource from "ol/source/VectorTile";
@@ -13,8 +13,11 @@ import VectorSource from "ol/source/Vector";
 import { Style, Fill, Stroke, Circle } from "ol/style";
 import { Point } from "ol/geom";
 import { getFeatureStyle, lineColors } from "./styles";
+import StationPopup from "./StationPopup";
 
 const MapComponent = ({ setSelectedStation, setSelectedLine, visibleLines }) => {
+  const [selectedStation, setSelectedStationState] = useState(null);
+  const [coordinate, setCoordinate] = useState(null);
   const mapContainerRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const stationPopupRef = useRef(null);
@@ -29,7 +32,7 @@ const MapComponent = ({ setSelectedStation, setSelectedLine, visibleLines }) => 
       }),
     });
 
-    const vtLayer = new VectorTileLayer({
+    const vtLayerLines = new VectorTileLayer({
       source: new VectorTileSource({
         format: new MVT(),
         url: "http://localhost:8000/tiles/lines/{z}/{x}/{y}.mvt",
@@ -39,7 +42,7 @@ const MapComponent = ({ setSelectedStation, setSelectedLine, visibleLines }) => 
       style: (feature) => getFeatureStyle(feature, visibleLines),
     });
 
-    const stationLayer = new VectorLayer({
+    const vtLayerStations = new VectorLayer({
       source: new VectorSource({
         url: "/stations.geojson",
         format: new GeoJSON({
@@ -99,7 +102,7 @@ const MapComponent = ({ setSelectedStation, setSelectedLine, visibleLines }) => 
 
     const map = new Map({
       target: mapContainerRef.current,
-      layers: [baseLayer, vtLayer, stationLayer],
+      layers: [baseLayer, vtLayerLines, vtLayerStations],
       view: new View({
         center: fromLonLat([80.237617, 13.067439]),
         zoom: 11,
@@ -141,8 +144,12 @@ const MapComponent = ({ setSelectedStation, setSelectedLine, visibleLines }) => 
       });
 
       if (!features.length) {
-        setSelectedStation(null);
+        setSelectedStationState(null);
         setSelectedLine(null);
+        setCoordinate(null);
+        if (overlayRef.current) {
+          overlayRef.current.setPosition(undefined);
+        }
         return;
       }
 
@@ -150,7 +157,9 @@ const MapComponent = ({ setSelectedStation, setSelectedLine, visibleLines }) => 
       const stationName = feature.get("name");
 
       if (stationName) {
-        handleStationClick(feature, stationName);
+        console.log("Station clicked:", stationName);
+        console.log("Feature coordinates:", e.coordinate);
+        handleStationClick(feature, stationName, e.coordinate);
       }
     });
 
@@ -163,32 +172,31 @@ const MapComponent = ({ setSelectedStation, setSelectedLine, visibleLines }) => 
     };
   }, [visibleLines]);
 
-  const handleStationClick = (feature, stationName) => {
+  const handleStationClick = (feature, stationName, coordinate) => {
     const station = {
       name: stationName,
       network: feature.get("network"),
       name_ta: feature.get("name_ta"),
-      lines: [],
+      lines: feature.get("lines") || [],
     };
 
-    setSelectedStation(station);
-
-    const coordinates = feature.getGeometry().getCoordinates();
+    console.log("Setting station:", station);
+    setSelectedStationState(station);
+    setCoordinate(coordinate);
 
     if (overlayRef.current) {
-      overlayRef.current.setPosition(coordinates);
-    }
-
-    if (mapInstanceRef.current) {
-      mapInstanceRef.current.getView().animate({
-        center: coordinates,
-        duration: 1000,
-        zoom: Math.max(mapInstanceRef.current.getView().getZoom(), 15),
-      });
+      console.log("Setting overlay position:", coordinate);
+      overlayRef.current.setPosition(coordinate);
     }
   };
 
-  return <div ref={mapContainerRef} style={{ flex: 1, height: "100%" }} />;
+  return (
+    <div ref={mapContainerRef} style={{ flex: 1, height: "100%" }}>
+      <div ref={stationPopupRef} className="station-popup">
+        <StationPopup selectedStation={selectedStation} coordinate={coordinate} />
+      </div>
+    </div>
+  );
 };
 
 export default MapComponent;

@@ -14,10 +14,12 @@ import { Style, Fill, Stroke, Circle as CircleStyle } from "ol/style";
 import { Point } from "ol/geom";
 import { getFeatureStyle, lineColors } from "./styles";
 import StationPopup from "./StationPopup";
+import LinePanel from "./LinePanel";
 
 const MapComponent = ({ setSelectedStation, setSelectedLine, visibleLines }) => {
   const [selectedStation, setSelectedStationState] = useState(null);
   const [coordinate, setCoordinate] = useState(null);
+  const [selectedLineDetails, setSelectedLineDetails] = useState(null);
   const mapContainerRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const stationPopupRef = useRef(null);
@@ -157,31 +159,50 @@ const MapComponent = ({ setSelectedStation, setSelectedLine, visibleLines }) => 
     });
 
     map.on("click", (e) => {
-      const features = [];
-      map.forEachFeatureAtPixel(e.pixel, (feature) => {
+      console.log("Click event triggered");
+      let clickedFeature = null;
+      
+      map.forEachFeatureAtPixel(e.pixel, (feature, layer) => {
+        console.log("Found feature:", feature.getProperties());
+        // Check if it's a line feature (has lineString geometry)
+        if (feature.getGeometry().getType() === 'LineString') {
+          clickedFeature = { type: 'line', feature };
+          return true;
+        }
+        // Check if it's a station feature
         if (feature.get("name")) {
-          features.push(feature);
+          clickedFeature = { type: 'station', feature };
+          return true;
         }
       });
 
-      if (!features.length) {
+      if (!clickedFeature) {
         setSelectedStationState(null);
-        setSelectedLine(null);
-        setCoordinate(null);
+        setSelectedLineDetails(null);
         if (overlayRef.current) {
           overlayRef.current.setPosition(undefined);
         }
         return;
       }
 
-      const feature = features[0];
-      const stationName = feature.get("name");
-
-      if (stationName) {
-        console.log("Station clicked:", stationName);
-        console.log("Feature coordinates:", e.coordinate);
-        handleStationClick(feature, stationName, e.coordinate);
+      const { type, feature } = clickedFeature;
+      
+      if (type === 'line') {
+        console.log("Line clicked:", feature.getProperties());
+        handleLineClick(feature);
+      } else if (type === 'station') {
+        const stationName = feature.get("name");
+        if (stationName) {
+          handleStationClick(feature, stationName, feature.getGeometry().getCoordinates());
+        }
       }
+    });
+
+    // Add hover effect for lines
+    map.on("pointermove", (e) => {
+      const pixel = map.getEventPixel(e.originalEvent);
+      const hit = map.hasFeatureAtPixel(pixel);
+      map.getTargetElement().style.cursor = hit ? 'pointer' : '';
     });
 
     mapInstanceRef.current = map;
@@ -194,6 +215,7 @@ const MapComponent = ({ setSelectedStation, setSelectedLine, visibleLines }) => 
   }, [visibleLines]);
 
   const handleStationClick = (feature, stationName, coordinate) => {
+    console.log("Clicked station:", stationName);
     const station = {
       name: stationName,
       network: feature.get("network"),
@@ -203,6 +225,7 @@ const MapComponent = ({ setSelectedStation, setSelectedLine, visibleLines }) => 
 
     console.log("Setting station:", station);
     setSelectedStationState(station);
+    setSelectedLineDetails(null);
     setCoordinate(coordinate);
 
     if (overlayRef.current) {
@@ -211,11 +234,37 @@ const MapComponent = ({ setSelectedStation, setSelectedLine, visibleLines }) => 
     }
   };
 
+  const handleLineClick = (feature) => {
+    console.log("Handling line click");
+    const properties = feature.getProperties();
+    const lineDetails = {
+      name: properties.name || properties.line || "Unknown Line",
+      color: properties.color || '#000000',
+      length: properties.length || "22 km",
+      avgFrequency: properties.frequency || "10 minutes",
+      stations: properties.stations || ["Station 1", "Station 2"], // Replace with actual stations
+    };
+    console.log("Line details:", lineDetails);
+    setSelectedLineDetails(lineDetails);
+    setSelectedStation(null);
+    if (overlayRef.current) {
+      overlayRef.current.setPosition(undefined);
+    }
+  };
+
   return (
     <div ref={mapContainerRef} style={{ flex: 1, height: "100%" }}>
       <div ref={stationPopupRef} className="station-popup">
-        <StationPopup selectedStation={selectedStation} coordinate={coordinate} />
+        <StationPopup 
+          selectedStation={selectedStation} 
+          coordinate={coordinate} 
+        />
       </div>
+      <LinePanel 
+        selectedLine={selectedLineDetails} 
+        onClose={() => setSelectedLineDetails(null)}
+        onStationClick={handleStationClick}
+      />
     </div>
   );
 };

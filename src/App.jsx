@@ -56,7 +56,7 @@ const App = () => {
     "BlueLine": {
       name: "Blue Line",
       color: "#3280c3",
-      stations: ["Central Station", "Tech Park", "University"],
+      stations: ["Wimco Nagar Depot", "Wimco Nagar", "Tiruvottriyur", "Tiruvottriyur Theradi", "Kaladipet"],
       length: "22 km",
       avgFrequency: "10 minutes"
     },
@@ -120,15 +120,11 @@ const App = () => {
 
   // State to manage the visibility of lines
   const [visibleLines, setVisibleLines] = useState({
-    "BlueLine": true, "GreenLine": true, "RedLine": true,
-    "OrangeLine": true, "PurpleLine": true, "NorthLine": true,
-    "SouthLine": true, "WestLine": true, "MRTSLine": true,
+    "BlueLine": true, "GreenLine": true, "RedLine": true, "OrangeLine": true, "PurpleLine": true, "NorthLine": true, "SouthLine": true, "WestLine": true, "MRTSLine": true,
   });
 
   const lineColors = {
-    "BlueLine": "#3280c3", "GreenLine": "#52b747", "RedLine": "#e50000",
-    "OrangeLine": "#f76300", "PurpleLine": "#790079", "MRTSLine": "#008080",
-    "SouthLine": "#a9a9a9", "WestLine": "#0ddd22", "NorthLine": "#a0522d",
+    "BlueLine": "#3280c3", "GreenLine": "#52b747", "RedLine": "#e50000", "OrangeLine": "#f76300", "PurpleLine": "#790079", "MRTSLine": "#008080", "SouthLine": "#a9a9a9", "WestLine": "#0ddd22", "NorthLine": "#a0522d",
   };
 
   // State to manage dropdown visibility

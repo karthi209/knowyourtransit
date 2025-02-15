@@ -10,7 +10,7 @@ import { fromLonLat } from "ol/proj";
 import GeoJSON from "ol/format/GeoJSON";
 import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
-import { Style, Fill, Stroke, Circle as CircleStyle } from "ol/style";
+import { Style, Fill, Stroke, Icon, Circle as CircleStyle } from "ol/style";
 import { Point } from "ol/geom";
 import { getFeatureStyle, lineColors } from "./styles";
 import StationPopup from "./StationPopup";
@@ -35,14 +35,16 @@ const MapComponent = ({ setSelectedStation, setSelectedLine, visibleLines }) => 
       }),
     });
 
-    const vtLayerLines = new VectorTileLayer({
-      source: new VectorTileSource({
-        format: new MVT(),
-        url: "http://localhost:8000/tiles/lines/{z}/{x}/{y}.mvt",
-        overlaps: false,
-        tilePixelRatio: 2,
+    const vtLayerLines = new VectorLayer({
+      source: new VectorSource({
+        url: "/lines.geojson",
+        format: new GeoJSON({
+          featureProjection: "EPSG:3857",
+          overlaps: false,
+          tilePixelRatio: 2,
+        }),
       }),
-      style: (feature) => getFeatureStyle(feature, visibleLines),
+      style: (feature) => getFeatureStyle(feature, map.getView().getZoom()),
     });
 
     const vtLayerStations = new VectorLayer({
@@ -54,42 +56,158 @@ const MapComponent = ({ setSelectedStation, setSelectedLine, visibleLines }) => 
       }),
       style: (feature) => {
         const map = mapInstanceRef.current;
-        if (!map) return null;
-
-        const zoomLevel = map.getView().getZoom();
-        const radius = 2 + (zoomLevel - 10) * 0.5;
+        if (!map) return []; // Ensure map exists
+    
+        const zoomLevel = map.getView().getZoom() || 10;
+    
+        const minZoom = 11; // Below this, station markers will be tiny circles
+        const maxZoom = 22; // Beyond this, icons reach max size
+        const transitionZoom = 13; // Zoom level where the icon replaces the circle
+    
         const associatedLines = feature.get("lines") || [];
-
+        const stationPosition = feature.getGeometry().getCoordinates();
+    
+        const styles = [];
+    
+        // 1km radius in meters (assuming Web Mercator projection)
+        const radiusMeters = 2000;
+    
+        // Convert meters to pixels based on zoom level
+        const resolution = map.getView().getResolution();
+        const radiusPixels = radiusMeters / resolution;
+    
+        // Gradient Circle for 1km radius
+        styles.push(
+          new Style({
+            image: new Icon({
+              img: createGradientCircle(radiusPixels),
+              imgSize: [radiusPixels * 2, radiusPixels * 2],
+              anchor: [0.5, 0.5],
+            }),
+            geometry: new Point(stationPosition),
+          })
+        );
+    
         if (!associatedLines.length) {
+          if (zoomLevel < transitionZoom) {
+            const circleRadius = Math.max(2, (zoomLevel - minZoom) * 2);
+            styles.push(
+              new Style({
+                image: new CircleStyle({
+                  radius: circleRadius,
+                  fill: new Fill({ color: "rgba(0, 0, 0, 0.5)" }), // Semi-transparent black
+                  stroke: new Stroke({ color: "white", width: 1 }),
+                }),
+              })
+            );
+          } else {
+            const scale = Math.min(Math.max(0.2, (zoomLevel - transitionZoom) / 14), 2);
+            styles.push(
+              new Style({
+                image: new Icon({
+                  src: "/st_icon.png",
+                  scale: scale,
+                  anchor: [0.5, 0.5],
+                }),
+              })
+            );
+          }
+          return styles;
+        }
+    
+        const radius = Math.max(2, 2 + (zoomLevel - 10) * 0.5);
+        const angleStep = (2 * Math.PI) / associatedLines.length;
+        const offset = Math.max(5, radius * 2);
+    
+        associatedLines.forEach((line, index) => {
+          const angle = index * angleStep;
+          styles.push(
+            new Style({
+              image: new CircleStyle({
+                radius: radius,
+                fill: new Fill({ color: lineColors[line] || "red" }),
+                stroke: new Stroke({ color: "white", width: 1 }),
+              }),
+              geometry: new Point([
+                stationPosition[0] + Math.cos(angle) * offset,
+                stationPosition[1] + Math.sin(angle) * offset,
+              ]),
+            })
+          );
+        });
+    
+        return styles;
+      },
+    });
+    
+    // Function to create a radial gradient canvas for the 1km radius
+    function createGradientCircle(size) {
+      const canvas = document.createElement("canvas");
+      canvas.width = size * 2;
+      canvas.height = size * 2;
+    
+      const ctx = canvas.getContext("2d");
+      const gradient = ctx.createRadialGradient(size, size, 0, size, size, size);
+    
+      gradient.addColorStop(0, "rgba(0, 0, 255, 0.3)"); // Inner light blue
+      gradient.addColorStop(1, "rgba(0, 0, 255, 0)"); // Outer transparent
+    
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(size, size, size, 0, 2 * Math.PI);
+      ctx.fill();
+    
+      return canvas;
+    }    
+
+    const vtLayerStationLayout = new VectorLayer({
+      source: new VectorSource({
+        url: "/stationLayouts.geojson",
+        format: new GeoJSON({
+          featureProjection: "EPSG:3857",
+        }),
+      }),
+      style: (feature, resolution) => {
+        // Approximate conversion from resolution to zoom for EPSG:3857:
+        // zoom = log2(156543.03 / resolution)
+        const zoom = Math.log2(156543.03 / resolution);
+        // Only apply the style when zoom is 14 or greater.
+        if (zoom >= 15) {
           return new Style({
-            image: new CircleStyle({
-              radius: radius,
-              fill: new Fill({ color: "red" }),
-              stroke: new Stroke({ color: "white", width: 1 }),
+            fill: new Fill({
+              // Transparent grey fill
+              color: "rgba(128, 128, 128, 0.8)",
+            }),
+            // No stroke is defined.
+          });
+        }
+        // Return null to not render the features at lower zooms.
+        return null;
+      },
+    });
+
+    const vtLayerStationWalk = new VectorLayer({
+      source: new VectorSource({
+        url: "/walks.geojson",
+        format: new GeoJSON({
+          featureProjection: "EPSG:3857",
+        }),
+      }),
+      style: (feature, resolution) => {
+        // Approximate conversion from resolution to zoom for EPSG:3857:
+        // zoom = log2(156543.03 / resolution)
+        const zoom = Math.log2(156543.03 / resolution);
+        // Only apply the style when zoom is 14 or greater.
+        if (zoom >= 15) {
+          return new Style({
+            stroke: new Stroke({
+              color: "rgba(106, 105, 105, 0.5)", // Transparent grey fill
+              width: 2, // Line width
+              lineDash: [10, 5], // Dashed line: 10px dash, 5px gap
             }),
           });
         }
-
-        const stationPosition = feature.getGeometry().getCoordinates();
-        const styles = associatedLines.map((line, index) => {
-          const angleStep = (2 * Math.PI) / associatedLines.length;
-          const angle = index * angleStep;
-          const offset = 5;
-
-          return new Style({
-            image: new CircleStyle({
-              radius: radius,
-              fill: new Fill({ color: lineColors[line] || "red" }),
-              stroke: new Stroke({ color: "white", width: 1 }),
-            }),
-            geometry: new Point([
-              stationPosition[0] + Math.cos(angle) * offset,
-              stationPosition[1] + Math.sin(angle) * offset,
-            ]),
-          });
-        });
-
-        return styles;
+        return null;
       },
     });
 
@@ -105,7 +223,7 @@ const MapComponent = ({ setSelectedStation, setSelectedLine, visibleLines }) => 
 
     const map = new Map({
       target: mapContainerRef.current,
-      layers: [baseLayer, vtLayerLines, vtLayerStations],
+      layers: [baseLayer, vtLayerLines, vtLayerStationLayout, vtLayerStationWalk, vtLayerStations],
       view: new View({
         center: fromLonLat([80.237617, 13.067439]),
         zoom: 11,
@@ -117,34 +235,35 @@ const MapComponent = ({ setSelectedStation, setSelectedLine, visibleLines }) => 
       renderer: "canvas",
     });
 
-    const highlightStyle = (originalStyle) => new Style({
-      image: new CircleStyle({
-        radius: originalStyle.getImage().getRadius() * 1.2,
-        fill: originalStyle.getImage().getFill(),
-        stroke: originalStyle.getImage().getStroke(),
-      }),
-    });
-
-    map.on("pointermove", (e) => {
-      map.getTargetElement().style.cursor = '';
-
-      if (highlightedFeature) {
-        highlightedFeature.setStyle(highlightedFeature.get('originalStyle'));
-        setHighlightedFeature(null);
+    const highlightStyle = (feature) => {
+      if (!feature) {
+        console.warn("No feature provided to highlightStyle");
+        return null;
       }
-
-      map.forEachFeatureAtPixel(e.pixel, (feature) => {
-        if (feature.get("name")) {
-          map.getTargetElement().style.cursor = 'pointer';
-          if (!feature.get('originalStyle')) {
-            feature.set('originalStyle', feature.getStyle());
-          }
-          feature.setStyle(highlightStyle(feature.get('originalStyle')));
-          setHighlightedFeature(feature);
-          return true;
+    
+      let style = feature.getStyle();
+    
+      // Ensure style is an array (VectorTile layers may use multiple styles)
+      if (!style) {
+        console.warn("Feature has no style, generating new style:", feature);
+        style = getFeatureStyle(feature, visibleLines); // Use your existing style function
+      }
+    
+      // Handle cases where OpenLayers might return an array of styles
+      const styles = Array.isArray(style) ? style : [style];
+    
+      return styles.map((s) => {
+        if (!s) return null;
+    
+        const image = s.getImage();
+        if (image) {
+          image.setScale(1.2); // Highlight effect
         }
-      });
-    });
+    
+        return s;
+      }).filter(Boolean); // Remove any null styles
+    };
+    
 
     map.on("pointerdown", () => {
       map.getTargetElement().style.cursor = "grabbing";
@@ -218,9 +337,11 @@ const MapComponent = ({ setSelectedStation, setSelectedLine, visibleLines }) => 
     console.log("Clicked station:", stationName);
     const station = {
       name: stationName,
-      network: feature.get("network"),
       name_ta: feature.get("name_ta"),
-      lines: feature.get("lines") || [],
+      line: feature.get("line"),
+      network: feature.get("network"),
+      st_no: feature.get("st_no"),
+      id: feature.get("id")
     };
 
     console.log("Setting station:", station);

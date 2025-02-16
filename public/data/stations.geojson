@@ -194,7 +194,7 @@
         "id": "SCC",
         "name": "Central Metro",
         "name_ta": "சென்ட்ரல் மெட்ரோ",
-        "line": "Blue Line, Green Line, Inter-Corridor Line",
+        "line": "Blue Line, Green Line, Inter-Corridor",
         "network": "Metro",
         "interchange": "Blue Line, Green Line, South Line, West Line, MRTS, Inter-Corridor Line",
         "parking": "yes",

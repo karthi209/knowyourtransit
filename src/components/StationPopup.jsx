@@ -1,6 +1,6 @@
 import { ChevronRightIcon } from '@heroicons/react/solid'; // Import icon from Heroicons
 
-const StationPopup = ({ selectedStation, children }) => {
+const StationPopup = ({ selectedStation, onMoreDetailsClick }) => {
   if (!selectedStation) return null;
 
   // Example color mapping for different lines
@@ -77,30 +77,33 @@ const StationPopup = ({ selectedStation, children }) => {
 
   return (
     <div
-      // In StationPopup
-      className="station-popup bg-white p-1.5 rounded-lg z-10 mr-1"
+      className="station-popup bg-white shadow-lg rounded-lg p-5 pr-7 pt-6 max-w-fit"
       style={{
         pointerEvents: "auto",
-        fontSize: "14px",
-        transition: "transform 0.3s ease-out",
-        width: 'auto', // Let the width adjust based on content
-        maxWidth: '100%', // Ensure it doesn't exceed the available space
-      }}
+        fontSize: "13px",
+        display: selectedStation ? "inline-block" : "none",
+        width: "max-content",
+      }}      
     >
       {/* Logo and Station Name */}
-      <div className="flex items-center mb-2">
+      <div className="flex items-start gap-3">
         <img
-          src={getLogo(selectedStation.network)}  // Conditionally render the logo based on network
+          src={getLogo(selectedStation.network)}
           alt="Station Logo"
-          className="w-6 h-6 mr-2 mt-1"  // Adjust size as needed
+          className="w-10 h-10 mt-1 mr-1 flex-shrink-0"
         />
-        <h3 className="text-lg font-semibold whitespace-nowrap mt-1 pr-4">{selectedStation.name}</h3> {/* Added padding */}
+        <div className="min-w-0">
+          <h3 className="text-lg font-semibold text-gray-900 break-words">
+            {selectedStation.name}
+          </h3>
+          <h6 className="text-md text-gray-600 break-words">
+            {selectedStation.name_ta}
+          </h6>
+        </div>
       </div>
 
-      <h6 className="text-md text-gray-600 whitespace-nowrap pr-4">{selectedStation.name_ta}</h6> {/* Added padding */}
-
       {/* Station ID with parking, accessibility, escalator, and type icons */}
-      <p className="mt-2 pt-1 pb-2 flex items-center">
+      <p className="ml-12 pl-1 mt-2 pt-1 pb-2 flex items-center">
         {/* Conditionally show the parking icon */}
         <img
           src={getFeatureIcon('parking', selectedStation.parking)} // Call the helper function
@@ -134,41 +137,32 @@ const StationPopup = ({ selectedStation, children }) => {
         />
       </p>
 
-      {/* Display multiple lines with individual colors in separate boxes */}
-      <div className="mt-2 flex flex-wrap gap-2">
+      <div className="ml-12 pl-1 mt-2 flex flex-wrap gap-2">
         {lines.length > 0 ? (
           lines.map((line, index) => (
             <span
               key={index}
               className={`inline-block text-xs px-2.5 py-2 rounded-lg text-white ${getLineColor(line.trim())} whitespace-nowrap`}
             >
-              {line.trim()} {/* Use trim to remove extra spaces around the line name */}
+              {line.trim()}
             </span>
           ))
         ) : (
           <span
-            className={`inline-block px-2 py-1 rounded-lg text-white ${getLineColor(selectedStation.line)} whitespace-nowrap`}
+            className={`inline-block text-xs px-2.5 py-2 rounded-lg text-white ${getLineColor(selectedStation.line)} whitespace-nowrap`}
           >
             {selectedStation.line}
           </span>
         )}
       </div>
 
-      {/* Display Frequency Section */}
-      {selectedStation.frequency && (
-        <div className="mt-3 flex items-center">
-          <span className="font-medium text-gray-700">Frequency:</span>
-          <span className="ml-2 text-sm text-gray-600">{selectedStation.frequency}</span>
-        </div>
-      )}
-
       {/* More Details Icon Button */}
-      <div className="mt-3 flex justify-center">
+      <div className="ml-12 pl-1 mt-4 flex justify-start">
         <button
           className="p-2 bg-gray-100 rounded-full hover:bg-gray-200 focus:outline-none"
-          onClick={children} // Assuming you will pass a function to handle the details logic
+          onClick={onMoreDetailsClick} // Assuming you will pass a function to handle the details logic
         >
-          <ChevronRightIcon className="w-5 h-5 text-gray-600" />
+          <ChevronRightIcon className="w-4 h-4 text-gray-600" />
         </button>
       </div>
     </div>

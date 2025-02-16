@@ -12,7 +12,7 @@ export const lineColors = {
   NorthLine: "#a0522d",
 };
 
-// Function to create a lighter version of a color
+// Function to create a lighter version of a color for background
 const lightenColor = (hex, opacity = 0.3) => {
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);
@@ -21,18 +21,23 @@ const lightenColor = (hex, opacity = 0.3) => {
 };
 
 export const getFeatureStyle = (feature, currentZoom) => {
-  const lineName = feature.get("layer");
-  const lineColor = lineColors[lineName] || "#808080"; // Default to gray
+  const lineName = feature.get("Name");
+  console.log("Feature line:", lineName); // Debug
 
-  const baseWidth = 2; // Slightly increased for better visibility
-  const zoomFactor = 0.7; // Adjust zoom scaling
-  const width = Math.max(baseWidth + (11 - 10) * zoomFactor, 1);
-  const backgroundColor = lightenColor(lineColor, 0.3); // Lighter version of main color
+  if (!lineName) return new Style({}); // Prevent errors if lineName is missing
 
-  const zoomThreshold = 14;
+  const cleanLineName = lineName.replace(/\s+/g, "");
+  const lineColor = lineColors[cleanLineName] || "#808080";
+  console.log("Mapped Color:", lineColor); // Debug
+
+  const baseWidth = 2;
+  const zoomFactor = 0.7;
+  const width = Math.max(baseWidth + (currentZoom - 10) * zoomFactor, 1);
+  const backgroundColor = lightenColor(lineColor, 0.3);
+
+  const zoomThreshold = 0; // Force visibility
 
   const styles = [
-    // Foreground Stroke (Main Line)
     new Style({
       stroke: new Stroke({
         color: lineColor,
@@ -43,7 +48,6 @@ export const getFeatureStyle = (feature, currentZoom) => {
     }),
   ];
 
-  // Add background stroke only if zoom is higher than threshold
   if (currentZoom >= zoomThreshold) {
     styles.unshift(
       new Style({
@@ -59,3 +63,5 @@ export const getFeatureStyle = (feature, currentZoom) => {
 
   return styles;
 };
+
+

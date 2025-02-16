@@ -1,16 +1,39 @@
-import React from "react";
+// LineDetails.jsx
+import { useMapContext } from "../context/MapContext"
 
-const LineDetails = ({ selectedLine }) => {
-  if (!selectedLine) return null;
+function LineDetails() {
+  const { selectedLine } = useMapContext()
+
+  if (!selectedLine) return null
 
   return (
-    <div style={{ width: "200px", padding: "10px", background: "#f0f0f0" }}>
-      <h4>Line Details</h4>
-      <p><strong>Name:</strong> {selectedLine.name}</p>
-      <p><strong>Description:</strong> {selectedLine.description}</p>
-      {/* Add more details as needed */}
+    <div className="p-4 bg-white shadow-md rounded-lg m-4">
+      <h4 className="text-lg font-semibold mb-3">Line Details</h4>
+      <p className="mb-2">
+        <strong>Name:</strong> {selectedLine.name}
+      </p>
+      <p className="mb-2">
+        <strong>Description:</strong> {selectedLine.description}
+      </p>
+      {selectedLine.length && (
+        <p className="mb-2">
+          <strong>Length:</strong> {selectedLine.length} km
+        </p>
+      )}
+      {selectedLine.stations && (
+        <div>
+          <strong>Stations:</strong>
+          <ul className="mt-2 list-disc list-inside">
+            {selectedLine.stations.map((station, index) => (
+              <li key={index} className="text-sm text-gray-600">
+                {station}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
-  );
-};
+  )
+}
 
-export default LineDetails;
+export default LineDetails

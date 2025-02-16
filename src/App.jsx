@@ -1,53 +1,32 @@
-import React, { useState } from "react";
-import "bootstrap/dist/css/bootstrap.min.css";
-import "ol/ol.css";
+import { MapProvider } from "./context/MapContext";
 import MapComponent from "./components/MapComponent";
-import StationPopup from "./components/StationPopup";
 import LayerControl from "./components/LayerControl";
 import LineDetails from "./components/LineDetails";
+import SearchBar from "./components/SearchBar"; // Ensure this file exists
+import BufferToggle from "./components/BufferToggle"; // Ensure this file exists
+import SidePanel from "./components/SidePanel"; // Ensure this file exists
 
-const App = () => {
-  const [selectedStation, setSelectedStation] = useState(null);
-  const [selectedLine, setSelectedLine] = useState(null);
-  const [visibleLines, setVisibleLines] = useState({
-    BlueLine: true,
-    GreenLine: true,
-    RedLine: true,
-    OrangeLine: true,
-    PurpleLine: true,
-    NorthLine: true,
-    SouthLine: true,
-    WestLine: true,
-    MRTSLine: true,
-  });
-
+function App() {
   return (
-    <div style={{ display: "flex", height: "100vh", position: "relative" }}>
-      <MapComponent
-        setSelectedStation={setSelectedStation}
-        setSelectedLine={setSelectedLine}
-        visibleLines={visibleLines}
-      />
-      <StationPopup
-        selectedStation={selectedStation}
-        setSelectedStation={setSelectedStation}
-      />
-      <LineDetails selectedLine={selectedLine} />
-      <LayerControl
-        visibleLines={visibleLines}
-        setVisibleLines={setVisibleLines}
-        style={{
-          position: "absolute",
-          right: 0,
-          top: 0,
-          width: "200px",
-          padding: "10px",
-          background: "#f0f0f0",
-          zIndex: 1000,
-        }}
-      />
-    </div>
+    <MapProvider>
+      <div className="flex h-screen w-screen relative overflow-hidden">
+        <div className="flex-1 relative">
+          <MapComponent />
+        </div>
+
+        {/* UI Panel for controls */}
+        <div className="absolute top-0 right-0 z-50 bg-white shadow-lg p-4 space-y-4">
+          <SearchBar />  {/* Add search bar */}
+          <LayerControl />
+          <LineDetails />
+          <BufferToggle />  {/* Add buffer button */}
+        </div>
+
+        {/* Side panel for additional details */}
+        <SidePanel />  {/* Add side panel */}
+      </div>
+    </MapProvider>
   );
-};
+}
 
 export default App;

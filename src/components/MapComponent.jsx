@@ -12,6 +12,7 @@ const MapComponent = () => {
   const { setSelectedStation, setSelectedLine } = useMapContext();
   const [selectedStation, setSelectedStationState] = useState(null);
   const [coordinate, setCoordinate] = useState(null);
+  const [showLinePanel, setShowLinePanel] = useState(false); // Track visibility of the line panel
 
   const mapContainerRef = useRef(null);
   const mapInstanceRef = useRef(null);
@@ -93,6 +94,9 @@ const MapComponent = () => {
       network: properties.network || "N/A",
       st_no: properties.st_no || "N/A",
       id: properties.id || "N/A",
+      parking: properties.parking || "no",
+      accessible: properties.accessible || "no",
+      escalator: properties.escalator || "no"
     };
 
     setSelectedStationState(station);
@@ -135,27 +139,41 @@ const MapComponent = () => {
     map.getTargetElement().style.cursor = hit ? "pointer" : "";
   };
 
+  const handleMoreDetailsClick = () => {
+    setShowLinePanel(true); // Open the side panel when the "More Details" button is clicked
+  };
+
   return (
     <div ref={mapContainerRef} className="w-full h-full relative">
       {/* Station Popup Overlay */}
       <div
         ref={stationPopupRef}
-        className="station-popup absolute bg-white p-4 rounded-lg min-w-[200px] max-w-[300px] z-50"
+        className="station-popup absolute bg-white p-4 rounded-lg min-w-[200px] max-w-[1000px] z-50"
         style={{
           pointerEvents: "auto",
           fontSize: "13px",
           display: selectedStation ? "block" : "none", // Display popup if station is selected
         }}
       >
-        <StationPopup selectedStation={selectedStation} />
+        <StationPopup selectedStation={selectedStation}>
+          {/* More Details Button */}
+          <button
+            onClick={handleMoreDetailsClick}
+            className="mt-2 px-4 py-2 bg-blue-500 text-white rounded-lg"
+          >
+            More Details
+          </button>
+        </StationPopup>
       </div>
 
       {/* Line Panel for Line Details */}
-      <LinePanel
-        selectedLine={selectedStation?.line}
-        onClose={() => setSelectedLine(null)}
-        onStationClick={handleStationClick}
-      />
+      {showLinePanel && (
+        <LinePanel
+          selectedLine={selectedStation?.line}
+          onClose={() => setShowLinePanel(false)} // Close the line panel
+          onStationClick={handleStationClick}
+        />
+      )}
     </div>
   );
 };

@@ -13,7 +13,7 @@ const createVectorSource = (url) =>
   });
 
 const stationLayoutStyle = new Style({
-  fill: new Fill({ color: "rgba(128, 128, 128, 0.8)" }),
+  fill: new Fill({ color: "rgba(128, 128, 128, 0.5)" }),
 });
 
 const walkStyle = new Style({

@@ -92,11 +92,12 @@ const MapComponent = () => {
       name_ta: properties.name_ta || "N/A",
       line: properties.line || "Unknown Line",
       network: properties.network || "N/A",
-      st_no: properties.st_no || "N/A",
       id: properties.id || "N/A",
       parking: properties.parking || "no",
       accessible: properties.accessible || "no",
-      escalator: properties.escalator || "no"
+      escalator: properties.escalator || "no",
+      type: properties.type || "no",
+      frequency: properties.frequency || "N/A"
     };
 
     setSelectedStationState(station);

@@ -61,14 +61,30 @@ const StationPopup = ({ selectedStation, children }) => {
     }
   };
 
+  // Function to get the type icon (underground, elevated, grade)
+  const getTypeIcon = (type) => {
+    switch (type) {
+      case 'underground':
+        return "/underground.svg"; // Underground icon
+      case 'elevated':
+        return "/elevated.svg"; // Elevated icon
+      case 'grade':
+        return "/grade.svg"; // Grade icon
+      default:
+        return null; // Default case
+    }
+  };
+
   return (
     <div
       // In StationPopup
-      className="station-popup bg-white p-1.5 rounded-lg max-w-[1000px] z-10"
+      className="station-popup bg-white p-1.5 rounded-lg z-10 mr-1"
       style={{
         pointerEvents: "auto",
         fontSize: "14px",
         transition: "transform 0.3s ease-out",
+        width: 'auto', // Let the width adjust based on content
+        maxWidth: '100%', // Ensure it doesn't exceed the available space
       }}
     >
       {/* Logo and Station Name */}
@@ -78,12 +94,12 @@ const StationPopup = ({ selectedStation, children }) => {
           alt="Station Logo"
           className="w-6 h-6 mr-2 mt-1"  // Adjust size as needed
         />
-        <h3 className="text-lg font-semibold whitespace-nowrap mt-1">{selectedStation.name}</h3>
+        <h3 className="text-lg font-semibold whitespace-nowrap mt-1 pr-4">{selectedStation.name}</h3> {/* Added padding */}
       </div>
 
-      <h6 className="text-md text-gray-600">{selectedStation.name_ta}</h6>
+      <h6 className="text-md text-gray-600 whitespace-nowrap pr-4">{selectedStation.name_ta}</h6> {/* Added padding */}
 
-      {/* Station ID with parking and accessibility icons */}
+      {/* Station ID with parking, accessibility, escalator, and type icons */}
       <p className="mt-2 pt-1 pb-2 flex items-center">
         {/* Conditionally show the parking icon */}
         <img
@@ -108,6 +124,14 @@ const StationPopup = ({ selectedStation, children }) => {
           className="w-6 h-6 mr-2"
           style={{ filter: "invert(36%) sepia(88%) saturate(2083%) hue-rotate(190deg) brightness(97%) contrast(103%)" }} // Blue tint
         />
+
+        {/* Conditionally show the station type icon */}
+        <img
+          src={getTypeIcon(selectedStation.type)} // Call the helper function for type icon
+          alt={selectedStation.type} // Alt text for accessibility
+          className="w-4 h-4 mr-2"
+          style={{ filter: "invert(36%) sepia(88%) saturate(2083%) hue-rotate(190deg) brightness(97%) contrast(103%)" }} // Blue tint
+        />
       </p>
 
       {/* Display multiple lines with individual colors in separate boxes */}
@@ -129,6 +153,14 @@ const StationPopup = ({ selectedStation, children }) => {
           </span>
         )}
       </div>
+
+      {/* Display Frequency Section */}
+      {selectedStation.frequency && (
+        <div className="mt-3 flex items-center">
+          <span className="font-medium text-gray-700">Frequency:</span>
+          <span className="ml-2 text-sm text-gray-600">{selectedStation.frequency}</span>
+        </div>
+      )}
 
       {/* More Details Icon Button */}
       <div className="mt-3 flex justify-center">

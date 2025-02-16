@@ -191,16 +191,17 @@
     {
       "type": "Feature",
       "properties": {
+        "id": "SCC",
         "name": "Central Metro",
         "name_ta": "சென்ட்ரல் மெட்ரோ",
         "line": "Blue Line, Green Line, Inter-Corridor Line",
         "network": "Metro",
-        "st_no": "13",
         "interchange": "Blue Line, Green Line, South Line, West Line, MRTS, Inter-Corridor Line",
-        "id": "SCC",
         "parking": "yes",
         "accessible": "yes",
-        "escalator": "yes"
+        "escalator": "yes",
+        "type": "underground",
+        "frequency": "5 mins"
       },
       "geometry": {
         "type": "Point",
@@ -216,7 +217,11 @@
         "network": "Metro",
         "st_no": "14",
         "interchange": null,
-        "id": "SGE"
+        "id": "SGE",
+        "parking": "yes",
+        "accessible": "yes",
+        "escalator": "yes",
+        "type": "underground"
       },
       "geometry": {
         "type": "Point",
@@ -616,12 +621,17 @@
     {
       "type": "Feature",
       "properties": {
-        "name": "Chennai Park Town",
-        "name_ta": null,
-        "line": null,
-        "network": "IR",
+        "name": "Park Town",
+        "name_ta": "பூங்கா நகர்",
+        "line": "MRTS",
+        "network": "MRTS",
         "st_no": null,
-        "interchange": null
+        "interchange": "South Line, Blue Line, Green Line, West Line, North Line",
+        "id": "MPKT",
+        "parking": "no",
+        "accessible": "no",
+        "escalator": "no",
+        "type": "grade"
       },
       "geometry": {
         "type": "Point",
@@ -1577,12 +1587,16 @@
     {
       "type": "Feature",
       "properties": {
+        "id": "MSB",
         "name": "Chennai Beach",
-        "name_ta": null,
-        "line": null,
-        "network": null,
-        "st_no": null,
-        "interchange": null
+        "name_ta": "சென்னை கடற்கரை",
+        "line": "South Line, MRTS, North Line, West Line",
+        "network": "Suburban",
+        "interchange": "South Line, MRTS, North Line, West Line",
+        "parking": "no",
+        "accessible": "no",
+        "escalator": "no",
+        "type": "grade"
       },
       "geometry": {
         "type": "Point",
@@ -2288,12 +2302,17 @@
     {
       "type": "Feature",
       "properties": {
-        "name": "Chennai Central",
-        "name_ta": "சென்ட்ரல்",
+        "id": "MASS",
+        "name": "Central Moore Market Complex",
+        "name_ta": "சென்ட்ரல் மூர் மார்க்கெட்",
         "line": "North Line, West Line",
         "network": "Suburban",
-        "st_no": "1",
-        "interchange": "North Line, West Line, Blue Line, Green Line, MRTS"
+        "interchange": "North Line, West Line, Blue Line, Green Line, MRTS",
+        "parking": "yes",
+        "accessible": "no",
+        "escalator": "no",
+        "type": "grade",
+        "frequency": "10 mins"
       },
       "geometry": {
         "type": "Point",

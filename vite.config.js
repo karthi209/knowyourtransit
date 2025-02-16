@@ -1,15 +1,18 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import mkcert from 'vite-plugin-mkcert';
-import fetch from 'node-fetch'; // Import node-fetch
 
 // Ensure fetch is available
 global.fetch = fetch;
 
 export default defineConfig(({ mode }) => {
   return {
-    plugins: [react(), mkcert()],
+    plugins: [react()],
     base: '/',  // This should be fine for both production and dev (as both are served from the root)
+    resolve: {
+      alias: {
+        '@': '/src',
+      },
+    },
     server: {
       host: '0.0.0.0',  // Allow external access for local dev
       port: 5173,        // Port for local dev server

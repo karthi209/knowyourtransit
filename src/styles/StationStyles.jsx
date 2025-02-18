@@ -65,14 +65,6 @@ export const getStationStyle = (feature, mapInstance) => {
       
       styles.push(
         // Shadow layers
-        new Style({
-          image: new Icon({
-            src: "/st_icon.png",
-            scale: scale * 1.2,
-            opacity: 0.08,
-            anchor: [0.5, 0.5],
-          }),
-        }),
         // Main icon
         new Style({
           image: new Icon({
@@ -104,14 +96,6 @@ export const getStationStyle = (feature, mapInstance) => {
 
     // Add shadow layers
     styles.push(
-      // Ambient shadow
-      new Style({
-        image: new CircleStyle({
-          radius: baseRadius * 1.4,
-          fill: new Fill({ color: shadows.ambient }),
-        }),
-        geometry: markerPosition,
-      }),
       // Outer shadow
       new Style({
         image: new CircleStyle({

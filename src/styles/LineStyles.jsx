@@ -62,18 +62,6 @@ export const getFeatureStyle = (feature, currentZoom) => {
         lineDash: [],
       }),
     }),
-    // Secondary shadow with enhanced smoothing
-    new Style({
-      stroke: new Stroke({
-        color: shadows.secondaryShadow,
-        width: width * 1.5,
-        lineCap: "round",
-        lineJoin: "round",
-        miterLimit: 2,
-        lineDashOffset: 0,
-        lineDash: [],
-      }),
-    }),
     // Main line with optimized smoothing
     new Style({
       stroke: new Stroke({

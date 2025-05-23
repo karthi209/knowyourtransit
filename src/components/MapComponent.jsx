@@ -8,6 +8,7 @@ import { useMapContext } from "../context/MapContext"; // Assuming you have a co
 import StationPanel from "./StationPanel";
 import StationPopup from "./StationPopup"; // Assuming this is your station popup component
 import stationSequences from './stationSequences';
+import SearchBar from './SearchBar';
 
 const MapComponent = () => {
   const { setSelectedStation, setSelectedLine } = useMapContext();
@@ -28,6 +29,7 @@ const MapComponent = () => {
         url: "https://{a-c}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}@2x.png",
       }),
     });
+    
 
     if (stationPopupRef.current) {
       overlayRef.current = new Overlay({
@@ -51,8 +53,8 @@ const MapComponent = () => {
       view: new View({
         center: fromLonLat([80.237617, 13.067439]),
         zoom: 11,
-        minZoom: 11,
-        maxZoom: 22,
+        minZoom: 10, // Reduced minimum zoom to allow more zoom out
+        maxZoom: 19,
       }),
       overlays: overlayRef.current ? [overlayRef.current] : [],
       pixelRatio: 2,
@@ -145,8 +147,48 @@ const MapComponent = () => {
     setShowStationPanel(true); // Open the side panel when the "More Details" button is clicked
   };
 
+  const handleSearchStationSelect = (station) => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+
+    // Convert coordinates to map projection
+    const [lng, lat] = station.coordinates;
+    const coordinates = fromLonLat([lng, lat]);
+    
+    // Create station data object
+    const stationData = {
+      name: station.name,
+      name_ta: station.name_ta,
+      line: station.line,
+      network: station.network,
+      id: station.id,
+      parking: station.parking,
+      accessible: station.accessible,
+      escalator: station.escalator,
+      type: station.type
+    };
+
+    // Update selected station and coordinates
+    setSelectedStationState(stationData);
+    setCoordinate(coordinates);
+    
+    // Update popup position
+    if (overlayRef.current) {
+      overlayRef.current.setPosition(coordinates);
+    }
+
+    // Animate map to center on selected station
+    map.getView().animate({
+      center: coordinates,
+      zoom: 15,
+      duration: 1000
+    });
+  };
+
   return (
     <div ref={mapContainerRef} className="h-full relative">
+      <SearchBar onStationSelect={handleSearchStationSelect} />
+      
       {/* Station Popup Overlay */}
       <div
         ref={stationPopupRef}

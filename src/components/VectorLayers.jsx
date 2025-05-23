@@ -24,15 +24,15 @@ const walkStyle = new Style({
   }),
 });
 
-// 🛠 **FIXED: Function to create the station layer with `mapInstance`**
-export const createVectorLayerStations = (mapInstance) =>
-  new VectorLayer({
+export const createVectorLayerStations = (mapInstance) => {
+  return new VectorLayer({
     source: new VectorSource({
       url: "/data/stations.geojson",
       format: new GeoJSON({ featureProjection: "EPSG:3857" }),
     }),
     style: (feature) => getStationStyle(feature, mapInstance),
   });
+};
 
 export const vectorLayerLines = new VectorLayer({
   source: createVectorSource("/data/lines.geojson"),

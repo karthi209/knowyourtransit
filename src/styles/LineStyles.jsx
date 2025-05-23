@@ -39,29 +39,29 @@ export const getFeatureStyle = (feature, currentZoom) => {
 
   const styles = [
     // Outer glow with increased smoothing
-    new Style({
-      stroke: new Stroke({
-        color: shadows.glow,
-        width: width * 3,
-        lineCap: "round",
-        lineJoin: "round",
-        miterLimit: 2,
-        lineDashOffset: 0,
-        lineDash: [],
-      }),
-    }),
+    // new Style({
+    //   stroke: new Stroke({
+    //     color: shadows.glow,
+    //     width: width * 3,
+    //     lineCap: "round",
+    //     lineJoin: "round",
+    //     miterLimit: 2,
+    //     lineDashOffset: 0,
+    //     lineDash: [],
+    //   }),
+    // }),
     // Primary shadow with smoother edges
-    new Style({
-      stroke: new Stroke({
-        color: shadows.primaryShadow,
-        width: width * 2,
-        lineCap: "round",
-        lineJoin: "round",
-        miterLimit: 2,
-        lineDashOffset: 0,
-        lineDash: [],
-      }),
-    }),
+    // new Style({
+    //   stroke: new Stroke({
+    //     color: shadows.primaryShadow,
+    //     width: width * 2,
+    //     lineCap: "round",
+    //     lineJoin: "round",
+    //     miterLimit: 2,
+    //     lineDashOffset: 0,
+    //     lineDash: [],
+    //   }),
+    // }),
     // Main line with optimized smoothing
     new Style({
       stroke: new Stroke({

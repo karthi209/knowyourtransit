@@ -1,7 +1,7 @@
 const stationSequences = {
   "Blue Line": [
-    "Wimco Nagar Depot",
-    "Wimco Nagar",
+    "WIMCO Nagar Depot",
+    "WIMCO Nagar",
     "Tiruvottriyur",
     "Tiruvottriyur Theradi",
     "Kaladipet",

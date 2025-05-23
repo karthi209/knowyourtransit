@@ -835,6 +835,9 @@ const MapComponent = () => {
         }
 
         /* Hide default OpenLayers controls */
+        .ol-full-screen {
+          display: none !important;
+        }
         .ol-rotate {
           display: none !important;
         }

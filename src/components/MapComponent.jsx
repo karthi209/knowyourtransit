@@ -13,6 +13,8 @@ import SearchBar from './SearchBar';
 import { ZoomSlider, ZoomToExtent, FullScreen, MousePosition, Rotate } from "ol/control";
 import { Vector as VectorSource } from "ol/source";
 import { Style, Fill, Circle, Stroke } from "ol/style";
+import { Feature } from "ol";
+import { Point } from "ol/geom";
 
 const MapComponent = () => {
   const { setSelectedStation, setSelectedLine } = useMapContext();
@@ -411,15 +413,65 @@ const MapComponent = () => {
     setSelectedStationState(stationData);
     setCoordinate(coordinates);
     
-    if (overlayRef.current) {
-      overlayRef.current.setPosition(coordinates);
+    // Update the selected station highlight
+    if (selectedStationLayerRef.current && pulseLayerRef.current) {
+      const selectedSource = selectedStationLayerRef.current.getSource();
+      const pulseSource = pulseLayerRef.current.getSource();
+      selectedSource.clear();
+      pulseSource.clear();
+      
+      // Create a new feature for the selected station
+      const feature = new Feature({
+        geometry: new Point(coordinates),
+        ...stationData
+      });
+      
+      selectedSource.addFeature(feature);
+      pulseSource.addFeature(feature.clone());
+    }
+    
+    // Check if we're on mobile
+    const isMobile = window.innerWidth <= 768;
+    if (isMobile) {
+      // Show slide-up panel on mobile
+      setShowStationPanel(true);
+      setPanelHeight(window.innerHeight * 0.6);
+      if (overlayRef.current) {
+        overlayRef.current.setPosition(undefined);
+      }
+    } else {
+      // Show popup on desktop
+      if (overlayRef.current) {
+        overlayRef.current.setPosition(coordinates);
+      }
     }
 
-    map.getView().animate({
-      center: coordinates,
-      zoom: 15,
-      duration: 1000
-    });
+    // Center the map on the selected station
+    const view = map.getView();
+    if (isMobile) {
+      // Calculate the offset for mobile view to account for the slide-up panel
+      const mapSize = map.getSize();
+      const panelHeight = window.innerHeight * 0.6;
+      const visibleHeight = window.innerHeight * 0.4;
+      
+      const pixelRatio = mapSize[1] / window.innerHeight;
+      const offsetY = -(visibleHeight * 1.5) * pixelRatio;
+      
+      const [x, y] = coordinates;
+      const newCenter = [x, y + offsetY];
+      
+      view.animate({
+        center: newCenter,
+        zoom: 16,
+        duration: 1000
+      });
+    } else {
+      view.animate({
+        center: coordinates,
+        zoom: 15,
+        duration: 1000
+      });
+    }
   };
 
   const handleSearchLineSelect = (line) => {
@@ -649,20 +701,20 @@ const MapComponent = () => {
         /* Map Controls Styling */
         .map-controls {
           position: fixed;
-          top: 1em;
+          top: 5em;
           right: 1em;
           display: flex;
           flex-direction: column;
           gap: 0.5em;
-          z-index: 10000;
+          z-index: 10001;
         }
 
         .map-control-button {
           background-color: rgba(255, 255, 255, 0.95);
           border: none;
           border-radius: 50%;
-          width: 32px;
-          height: 32px;
+          width: 36px;
+          height: 36px;
           cursor: pointer;
           box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
           transition: all 0.2s ease;
@@ -692,68 +744,23 @@ const MapComponent = () => {
           color: #90CAF9;
         }
 
-        .dark-theme.station-popup {
-          background-color: rgba(33, 33, 33, 0.95);
-          color: #fff;
-          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
-        }
+        /* Mobile-specific styles */
+        @media (max-width: 768px) {
+          .map-controls {
+            top: 5em;
+            right: 1em;
+            flex-direction: column;
+            gap: 0.75em;
+          }
 
-        :global(.search-bar-container) {
-          position: fixed;
-          top: 1em;
-          left: 50%;
-          transform: translateX(-50%);
-          z-index: 10000;
-          width: 300px;
-          max-width: 90%;
-          background-color: rgba(255, 255, 255, 0.95);
-          border-radius: 4px;
-          padding: 4px;
-        }
+          .map-control-button {
+            width: 40px;
+            height: 40px;
+          }
 
-        :global(.search-bar-container input) {
-          width: 100%;
-          padding: 8px 12px;
-          border: 1px solid #ccc;
-          border-radius: 4px;
-          font-size: 14px;
-          background-color: rgba(255, 255, 255, 0.9);
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-
-        :global(.search-bar-container input:focus) {
-          outline: none;
-          border-color: #1565C0;
-          box-shadow: 0 2px 8px rgba(21, 101, 192, 0.2);
-        }
-
-        :global(.search-results) {
-          position: absolute;
-          top: 100%;
-          left: 0;
-          right: 0;
-          background-color: white;
-          border: 1px solid #ccc;
-          border-radius: 4px;
-          margin-top: 4px;
-          max-height: 300px;
-          overflow-y: auto;
-          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-          z-index: 10001;
-        }
-
-        :global(.search-result-item) {
-          padding: 8px 12px;
-          cursor: pointer;
-          border-bottom: 1px solid #eee;
-        }
-
-        :global(.search-result-item:hover) {
-          background-color: #f5f5f5;
-        }
-
-        :global(.search-result-item:last-child) {
-          border-bottom: none;
+          .map-control-button .material-icons {
+            font-size: 22px;
+          }
         }
 
         /* Station popup styling */

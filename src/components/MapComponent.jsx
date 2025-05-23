@@ -701,7 +701,7 @@ const MapComponent = () => {
         /* Map Controls Styling */
         .map-controls {
           position: fixed;
-          top: 5em;
+          top: 3em;
           right: 1em;
           display: flex;
           flex-direction: column;

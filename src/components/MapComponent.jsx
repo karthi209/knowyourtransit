@@ -581,7 +581,7 @@ const MapComponent = () => {
           }}
         >
           <div 
-            className={`h-full shadow-lg ${isDarkTheme ? 'bg-[#1a1a1a]' : 'bg-white'}`}
+            className={`h-full flex flex-col ${isDarkTheme ? 'bg-[#1a1a1a]' : 'bg-white'} shadow-lg`}
           >
             {/* Header with close button */}
             <div className={`w-full h-12 flex items-center justify-between px-4 ${isDarkTheme ? 'bg-[#2a2a2a]' : 'bg-white'} flex-shrink-0 border-b ${isDarkTheme ? 'border-gray-700' : 'border-gray-200'}`}>
@@ -599,7 +599,7 @@ const MapComponent = () => {
               </button>
             </div>
             
-            {/* Panel content */}
+            {/* Panel content - make it scrollable */}
             <div className={`flex-1 overflow-y-auto ${isDarkTheme ? 'text-white' : 'text-gray-900'}`}>
               <StationPanel
                 selectedStation={selectedStation}
@@ -666,7 +666,7 @@ const MapComponent = () => {
         </div>
       )}
 
-      <div className="map-controls">
+      <div className={`map-controls ${selectedStation && !showStationPanel ? 'side-panel-open' : ''}`}>
         <button
           onClick={toggleDarkTheme}
           className={`map-control-button theme-toggle ${isDarkTheme ? 'dark-theme' : ''}`}
@@ -740,7 +740,12 @@ const MapComponent = () => {
           display: flex;
           flex-direction: column;
           gap: 0.5em;
-          z-index: 10001;
+          z-index: 1000; /* Lower than the side panel */
+        }
+
+        /* Adjust map controls position when side panel is open */
+        .map-controls.side-panel-open {
+          right: calc(400px + 1em); /* 400px is the width of the side panel */
         }
 
         .map-control-button {
@@ -785,6 +790,10 @@ const MapComponent = () => {
             right: 1em;
             flex-direction: column;
             gap: 0.75em;
+          }
+
+          .map-controls.side-panel-open {
+            right: 1em; /* Reset for mobile */
           }
 
           .map-control-button {

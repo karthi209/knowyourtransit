@@ -588,6 +588,7 @@ const MapComponent = () => {
               <div className={`text-lg font-medium ${isDarkTheme ? 'text-white' : 'text-gray-900'}`}>Station Details</div>
               <button 
                 onClick={() => {
+                  setSelectedStationState(null);
                   if (overlayRef.current) {
                     overlayRef.current.setPosition(undefined);
                   }
@@ -599,10 +600,11 @@ const MapComponent = () => {
             </div>
             
             {/* Panel content */}
-            <div className={`flex-1 overflow-y-auto ${isDarkTheme ? 'text-white' : 'text-gray-900'} ${isDarkTheme ? 'bg-[#1a1a1a]' : 'bg-white'}`}>
+            <div className={`flex-1 overflow-y-auto ${isDarkTheme ? 'text-white' : 'text-gray-900'}`}>
               <StationPanel
                 selectedStation={selectedStation}
                 onClose={() => {
+                  setSelectedStationState(null);
                   if (overlayRef.current) {
                     overlayRef.current.setPosition(undefined);
                   }
@@ -635,9 +637,9 @@ const MapComponent = () => {
               flexDirection: 'column'
             }}
           >
-            {/* Drag handle - made larger and more prominent */}
+            {/* Drag handle */}
             <div 
-              className={`w-full h-12 flex items-center justify-center cursor-grab active:cursor-grabbing touch-none ${isDarkTheme ? 'bg-[#2a2a2a]' : 'bg-gray-100'} rounded-t-2xl flex-shrink-0 border-b ${isDarkTheme ? 'border-gray-700' : 'border-gray-200'}`}
+              className={`w-full h-12 flex items-center justify-center cursor-grab active:cursor-grabbing touch-none ${isDarkTheme ? 'bg-[#2a2a2a]' : 'bg-white'} rounded-t-2xl flex-shrink-0 border-b ${isDarkTheme ? 'border-gray-700' : 'border-gray-200'}`}
               onTouchStart={handleTouchStart}
               onTouchMove={handleTouchMove}
               onTouchEnd={handleTouchEnd}
@@ -647,7 +649,7 @@ const MapComponent = () => {
             
             {/* Panel content - only show when panel is not minimized */}
             {panelHeight > 40 && (
-              <div className="text-gray-900 dark:text-white flex-1 overflow-y-auto">
+              <div className={`flex-1 overflow-y-auto ${isDarkTheme ? 'text-white' : 'text-gray-900'}`}>
                 <StationPanel
                   selectedStation={selectedStation}
                   onClose={() => {
@@ -733,7 +735,7 @@ const MapComponent = () => {
         /* Map Controls Styling */
         .map-controls {
           position: fixed;
-          top: 3em;
+          top: 5em;
           right: 1em;
           display: flex;
           flex-direction: column;
@@ -805,10 +807,12 @@ const MapComponent = () => {
           position: fixed;
           z-index: 10000;
           color: #111827; /* text-gray-900 for light theme */
+          background-color: white;
         }
 
         .dark-theme.station-panel {
           color: #f3f4f6; /* text-gray-100 for dark theme */
+          background-color: #1a1a1a;
         }
 
         /* Mobile slide-up panel styles */
@@ -872,11 +876,11 @@ const MapComponent = () => {
 
           /* Remove the bluish gray background */
           .bg-gray-50 {
-            background-color: #f5f5f5 !important;
+            background-color: white !important;
           }
 
           .dark-theme .bg-gray-50 {
-            background-color: #2a2a2a !important;
+            background-color: #1a1a1a !important;
           }
 
           /* Ensure text colors in mobile panel */

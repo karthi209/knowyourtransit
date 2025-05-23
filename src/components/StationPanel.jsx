@@ -76,149 +76,191 @@ const StationPanel = ({ selectedStation, onClose, stationSequences, isDarkTheme 
     : [];
 
   const StationSequence = ({ line, currentStation, isDarkTheme }) => {
-    // Sample sequence data structure (you'll need to provide this via props)
     const sequence = stationSequences?.[line] || [];
     const currentIndex = sequence.findIndex(
       (station) => station === currentStation
     );
 
     return (
-      <div className={`mt-2 ${isDarkTheme ? 'bg-gray-700' : 'bg-white'} p-3 rounded-lg`}>
+      <div className={`mt-2 ${isDarkTheme ? 'bg-[#2a2a2a]' : 'bg-white'} p-3 rounded-lg border ${isDarkTheme ? 'border-gray-700' : 'border-gray-200'}`}>
         <div className="relative">
-          {/* Vertical line */}
-          <div className="absolute left-3 top-0 bottom-0 w-0.5 bg-gray-300" />
-
-          {/* Station sequence */}
-          {sequence.map((station, index) => (
-            <div
-              key={index}
-              className={`relative flex items-center py-2 ${
-                station === currentStation ? "font-bold" : ""
-              }`}
-            >
-              {/* Station dot */}
+          {/* Vertical line - bottom layer */}
+          <div className={`absolute left-[11px] top-0 bottom-0 w-0.5 ${isDarkTheme ? 'bg-gray-600' : 'bg-gray-300'} z-0`} />
+          {/* Station sequence - top layer */}
+          <div className="relative z-10">
+            {sequence.map((station, index) => (
               <div
-                className={`
-                w-2.5 h-2.5 rounded-full z-10 mr-4
-                ${
-                  station === currentStation
-                    ? "bg-blue-500 ring-4 ring-blue-100"
-                    : "bg-gray-400"
-                }
-              `}
-              />
-
-              {/* Station name */}
-              <span
-                className={`text-sm ${
-                  station === currentStation ? "text-blue-600" : isDarkTheme ? "text-gray-300" : "text-gray-900"
+                key={station}
+                className={`flex items-center mb-4 last:mb-0 ${
+                  index === currentIndex
+                    ? isDarkTheme ? 'text-blue-400' : 'text-blue-600'
+                    : isDarkTheme ? 'text-gray-300' : 'text-gray-600'
                 }`}
               >
-                {station}
-              </span>
-            </div>
-          ))}
+                <div
+                  className={`w-6 h-6 rounded-full flex items-center justify-center mr-3 ${
+                    index === currentIndex
+                      ? isDarkTheme ? 'bg-blue-400' : 'bg-blue-600'
+                      : isDarkTheme ? 'bg-gray-600' : 'bg-gray-300'
+                  }`}
+                >
+                  <span className={`text-xs ${isDarkTheme ? 'text-gray-900' : 'text-white'}`}>
+                    {index + 1}
+                  </span>
+                </div>
+                <span className="text-sm">{station}</span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     );
   };
 
   return (
-    <div className={`station-panel ${isDarkTheme ? 'dark-theme' : ''} bg-white dark:bg-[#1a1a1a] p-6 overflow-y-auto h-full select-none`}>
-      {/* Header with close button */}
-      <div className="flex justify-between items-start mb-6">
-        <div className="flex items-start gap-4">
-          <img
-            src={getLogo(selectedStation.network)}
-            alt="Station Logo"
-            className="w-12 h-12 flex-shrink-0"
-          />
-          <div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white select-none">
-              {selectedStation.name}
-            </h2>
-            <p className="text-gray-600 dark:text-gray-300 mt-1 select-none">{selectedStation.name_ta}</p>
+    <div className={`station-panel ${isDarkTheme ? 'dark-theme' : ''}`}>
+      <div className="p-4">
+        <div className="flex justify-between items-start mb-4">
+          <div className="flex items-start gap-4">
+            <img
+              src={getLogo(selectedStation.network)}
+              alt="Station Logo"
+              className="w-12 h-12 flex-shrink-0"
+            />
+            <div>
+              <h2 className={`text-xl font-semibold ${isDarkTheme ? 'text-white' : 'text-gray-900'}`}>
+                {selectedStation.name}
+              </h2>
+              <p className={`text-sm ${isDarkTheme ? 'text-gray-400' : 'text-gray-600'}`}>
+                {selectedStation.name_ta}
+              </p>
+            </div>
           </div>
+          <button
+            onClick={onClose}
+            className={`p-2 rounded-full ${isDarkTheme ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
+          >
+            <X className={`w-5 h-5 ${isDarkTheme ? 'text-gray-300' : 'text-gray-600'}`} />
+          </button>
         </div>
-        <button
-          onClick={onClose}
-          className={`p-2 rounded-full transition-colors ${isDarkTheme ? 'hover:bg-[#2a2a2a]' : 'hover:bg-gray-100'}`}
-        >
-          <X className={`w-6 h-6 ${isDarkTheme ? 'text-gray-400' : 'text-gray-600'}`} />
-        </button>
-      </div>
 
-      {/* Station Features */}
-      <div className="grid grid-cols-2 gap-3 mb-6">
-        <div className={`flex items-center gap-2 p-3 rounded-lg ${isDarkTheme ? 'bg-[#2a2a2a]' : 'bg-white'}`}>
-          <img
-            src={getFeatureIcon('parking', selectedStation.parking)}
-            alt={selectedStation.parking === "yes" ? "Parking Available" : "No Parking"}
-            className="w-6 h-6"
-            style={{ filter: isDarkTheme ? "invert(1) brightness(1.2)" : "brightness(0.2)" }}
-          />
-          <span className="text-sm text-gray-700 dark:text-gray-300 select-none">
-            {selectedStation.parking === "yes" ? "Parking" : "No Parking"}
-          </span>
-        </div>
-        <div className={`flex items-center gap-2 p-3 rounded-lg ${isDarkTheme ? 'bg-[#2a2a2a]' : 'bg-white'}`}>
-          <img
-            src={getFeatureIcon('accessible', selectedStation.accessible)}
-            alt={selectedStation.accessible === "yes" ? "Accessibility Available" : "No Accessibility"}
-            className="w-6 h-6"
-            style={{ filter: isDarkTheme ? "invert(1) brightness(1.2)" : "brightness(0.2)" }}
-          />
-          <span className="text-sm text-gray-700 dark:text-gray-300 select-none">
-            {selectedStation.accessible === "yes" ? "Accessible" : "Not Accessible"}
-          </span>
-        </div>
-        <div className={`flex items-center gap-2 p-3 rounded-lg ${isDarkTheme ? 'bg-[#2a2a2a]' : 'bg-white'}`}>
-          <img
-            src={getFeatureIcon('escalator', selectedStation.escalator)}
-            alt={selectedStation.escalator === "yes" ? "Escalator Available" : "No Escalator"}
-            className="w-6 h-6"
-            style={{ filter: isDarkTheme ? "invert(1) brightness(1.2)" : "brightness(0.2)" }}
-          />
-          <span className="text-sm text-gray-700 dark:text-gray-300 select-none">
-            {selectedStation.escalator === "yes" ? "Escalator" : "No Escalator"}
-          </span>
-        </div>
-        <div className={`flex items-center gap-2 p-3 rounded-lg ${isDarkTheme ? 'bg-[#2a2a2a]' : 'bg-white'}`}>
-          <img
-            src={getTypeIcon(selectedStation.type)}
-            alt={selectedStation.type}
-            className="w-6 h-6"
-            style={{ filter: isDarkTheme ? "invert(1) brightness(1.2)" : "brightness(0.2)" }}
-          />
-          <span className="text-sm text-gray-700 dark:text-gray-300 select-none capitalize">
-            {selectedStation.type} Station
-          </span>
-        </div>
-      </div>
+        <div className={`space-y-4 ${isDarkTheme ? 'text-gray-300' : 'text-gray-700'}`}>
+          <div className={`p-3 rounded-lg ${isDarkTheme ? 'bg-[#2a2a2a]' : 'bg-white'} border ${isDarkTheme ? 'border-gray-700' : 'border-gray-200'}`}>
+            <h3 className={`text-sm font-medium mb-2 ${isDarkTheme ? 'text-white' : 'text-gray-900'}`}>
+              Station Information
+            </h3>
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-sm">Line</span>
+                <div className="flex items-center gap-2">
+                  {lines.map((line) => (
+                    <div key={line} className="flex items-center gap-1">
+                      <div className={`w-3 h-3 rounded-full ${getLineColor(line)}`}></div>
+                      <span className={`text-sm font-medium ${isDarkTheme ? 'text-white' : 'text-gray-900'}`}>
+                        {line}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm">Network</span>
+                <span className={`text-sm font-medium ${isDarkTheme ? 'text-white' : 'text-gray-900'}`}>
+                  {selectedStation.network}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm">Station ID</span>
+                <span className={`text-sm font-medium ${isDarkTheme ? 'text-white' : 'text-gray-900'}`}>
+                  {selectedStation.id}
+                </span>
+              </div>
+            </div>
+          </div>
 
-      {/* Lines and Sequences */}
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white select-none">Lines and Sequences</h3>
-        {lines.map((line, index) => (
-          <div key={index} className={`${isDarkTheme ? 'bg-[#2a2a2a]' : 'bg-white'} rounded-lg p-4`}>
-            <button
-              onClick={() => setExpandedLine(expandedLine === line ? null : line)}
-              className="w-full flex items-center justify-between"
-            >
-              <span className={`inline-block px-3 py-1 rounded-lg text-white ${getLineColor(line)} select-none`}>
-                {line}
-              </span>
-              {expandedLine === line ? (
-                <ChevronUp className={`w-5 h-5 ${isDarkTheme ? 'text-gray-400' : 'text-gray-600'}`} />
-              ) : (
-                <ChevronDown className={`w-5 h-5 ${isDarkTheme ? 'text-gray-400' : 'text-gray-600'}`} />
+          <div className={`p-3 rounded-lg ${isDarkTheme ? 'bg-[#2a2a2a]' : 'bg-white'} border ${isDarkTheme ? 'border-gray-700' : 'border-gray-200'}`}>
+            <h3 className={`text-sm font-medium mb-2 ${isDarkTheme ? 'text-white' : 'text-gray-900'}`}>
+              Facilities
+            </h3>
+            <div className="grid grid-cols-2 gap-2">
+              <div className={`flex items-center space-x-2 ${isDarkTheme ? 'text-gray-300' : 'text-gray-600'}`}>
+                <img
+                  src={getFeatureIcon('parking', selectedStation.parking)}
+                  alt={selectedStation.parking === "yes" ? "Parking Available" : "No Parking"}
+                  className="w-6 h-6"
+                  style={{ filter: isDarkTheme ? "invert(1) brightness(1.2)" : "brightness(0.2)" }}
+                />
+                <span className="text-sm">{selectedStation.parking === "yes" ? "Parking" : "No Parking"}</span>
+              </div>
+              <div className={`flex items-center space-x-2 ${isDarkTheme ? 'text-gray-300' : 'text-gray-600'}`}>
+                <img
+                  src={getFeatureIcon('accessible', selectedStation.accessible)}
+                  alt={selectedStation.accessible === "yes" ? "Accessibility Available" : "No Accessibility"}
+                  className="w-6 h-6"
+                  style={{ filter: isDarkTheme ? "invert(1) brightness(1.2)" : "brightness(0.2)" }}
+                />
+                <span className="text-sm">{selectedStation.accessible === "yes" ? "Accessible" : "Not Accessible"}</span>
+              </div>
+              <div className={`flex items-center space-x-2 ${isDarkTheme ? 'text-gray-300' : 'text-gray-600'}`}>
+                <img
+                  src={getFeatureIcon('escalator', selectedStation.escalator)}
+                  alt={selectedStation.escalator === "yes" ? "Escalator Available" : "No Escalator"}
+                  className="w-6 h-6"
+                  style={{ filter: isDarkTheme ? "invert(1) brightness(1.2)" : "brightness(0.2)" }}
+                />
+                <span className="text-sm">{selectedStation.escalator === "yes" ? "Escalator" : "No Escalator"}</span>
+              </div>
+              <div className={`flex items-center space-x-2 ${isDarkTheme ? 'text-gray-300' : 'text-gray-600'}`}>
+                <img
+                  src={getTypeIcon(selectedStation.type)}
+                  alt={selectedStation.type}
+                  className="w-6 h-6"
+                  style={{ filter: isDarkTheme ? "invert(1) brightness(1.2)" : "brightness(0.2)" }}
+                />
+                <span className="text-sm capitalize">{selectedStation.type} Station</span>
+              </div>
+            </div>
+          </div>
+
+          {selectedStation.line && (
+            <div className={`p-3 rounded-lg ${isDarkTheme ? 'bg-[#2a2a2a]' : 'bg-white'} border ${isDarkTheme ? 'border-gray-700' : 'border-gray-200'}`}>
+              <div className="flex justify-between items-center mb-2">
+                <h3 className={`text-sm font-medium ${isDarkTheme ? 'text-white' : 'text-gray-900'}`}>
+                  Line Sequences
+                </h3>
+                <button
+                  onClick={() => setExpandedLine(expandedLine === 'all' ? null : 'all')}
+                  className={`p-1 rounded-full ${isDarkTheme ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
+                >
+                  {expandedLine === 'all' ? (
+                    <ChevronUp className={`w-5 h-5 ${isDarkTheme ? 'text-gray-300' : 'text-gray-600'}`} />
+                  ) : (
+                    <ChevronDown className={`w-5 h-5 ${isDarkTheme ? 'text-gray-300' : 'text-gray-600'}`} />
+                  )}
+                </button>
+              </div>
+              {expandedLine === 'all' && (
+                <div className="space-y-4">
+                  {lines.map((line) => (
+                    <div key={line} className="mt-2">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className={`w-3 h-3 rounded-full ${getLineColor(line)}`}></div>
+                        <span className={`text-sm font-medium ${isDarkTheme ? 'text-white' : 'text-gray-900'}`}>
+                          {line}
+                        </span>
+                      </div>
+                      <StationSequence
+                        line={line}
+                        currentStation={selectedStation.name}
+                        isDarkTheme={isDarkTheme}
+                      />
+                    </div>
+                  ))}
+                </div>
               )}
-            </button>
-            {expandedLine === line && (
-              <StationSequence line={line} currentStation={selectedStation.name} isDarkTheme={isDarkTheme} />
-            )}
-          </div>
-        ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

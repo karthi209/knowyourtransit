@@ -38,6 +38,7 @@ const MapComponent = () => {
   const satelliteBaseLayerRef = useRef(null);
   const panelRef = useRef(null);
   const selectedStationLayerRef = useRef(null);
+  const pulseLayerRef = useRef(null);
 
   useEffect(() => {
     if (mapInstanceRef.current) return; // Ensure map is only initialized once
@@ -70,17 +71,35 @@ const MapComponent = () => {
       source: new VectorSource(),
       style: new Style({
         image: new Circle({
-          radius: 8,
+          radius: 10,
           fill: new Fill({
-            color: '#1565C0'
+            color: isDarkTheme ? '#90CAF9' : '#1565C0'
           }),
           stroke: new Stroke({
             color: '#ffffff',
-            width: 2
+            width: 3
           })
         })
       }),
       zIndex: 1000
+    });
+
+    // Add a pulsing effect for the selected station
+    const pulseLayer = new VectorLayer({
+      source: new VectorSource(),
+      style: new Style({
+        image: new Circle({
+          radius: 15,
+          fill: new Fill({
+            color: isDarkTheme ? 'rgba(144, 202, 249, 0.2)' : 'rgba(21, 101, 192, 0.2)'
+          }),
+          stroke: new Stroke({
+            color: isDarkTheme ? 'rgba(144, 202, 249, 0.4)' : 'rgba(21, 101, 192, 0.4)',
+            width: 2
+          })
+        })
+      }),
+      zIndex: 999
     });
 
     if (stationPopupRef.current) {
@@ -102,7 +121,8 @@ const MapComponent = () => {
         createVectorLayerLines(selectedLine),
         vectorLayerStationLayouts,
         vectorLayerStationWalks,
-        selectedStationLayer // Add the selected station layer
+        pulseLayer,
+        selectedStationLayer
       ],
       view: new View({
         center: fromLonLat([80.237617, 13.067439]),
@@ -152,8 +172,41 @@ const MapComponent = () => {
 
     // Store the selected station layer reference
     selectedStationLayerRef.current = selectedStationLayer;
+    pulseLayerRef.current = pulseLayer;
+
+    // Add pulse animation
+    let pulseRadius = 15;
+    let growing = true;
+    const pulseInterval = setInterval(() => {
+      if (pulseLayerRef.current) {
+        const source = pulseLayerRef.current.getSource();
+        const features = source.getFeatures();
+        if (features.length > 0) {
+          if (growing) {
+            pulseRadius += 0.5;
+            if (pulseRadius >= 25) growing = false;
+          } else {
+            pulseRadius -= 0.5;
+            if (pulseRadius <= 15) growing = true;
+          }
+          pulseLayerRef.current.setStyle(new Style({
+            image: new Circle({
+              radius: pulseRadius,
+              fill: new Fill({
+                color: isDarkTheme ? 'rgba(144, 202, 249, 0.2)' : 'rgba(21, 101, 192, 0.2)'
+              }),
+              stroke: new Stroke({
+                color: isDarkTheme ? 'rgba(144, 202, 249, 0.4)' : 'rgba(21, 101, 192, 0.4)',
+                width: 2
+              })
+            })
+          }));
+        }
+      }
+    }, 50);
 
     return () => {
+      clearInterval(pulseInterval);
       map.setTarget(null);
       mapInstanceRef.current = null;
       overlayRef.current = null;
@@ -161,6 +214,8 @@ const MapComponent = () => {
       lightBaseLayerRef.current = null;
       darkBaseLayerRef.current = null;
       satelliteBaseLayerRef.current = null;
+      selectedStationLayerRef.current = null;
+      pulseLayerRef.current = null;
     };
   }, []);
 
@@ -234,11 +289,14 @@ const MapComponent = () => {
     setCoordinate(feature.getGeometry().getCoordinates());
 
     // Update the selected station highlight
-    if (selectedStationLayerRef.current) {
-      const source = selectedStationLayerRef.current.getSource();
-      source.clear();
+    if (selectedStationLayerRef.current && pulseLayerRef.current) {
+      const selectedSource = selectedStationLayerRef.current.getSource();
+      const pulseSource = pulseLayerRef.current.getSource();
+      selectedSource.clear();
+      pulseSource.clear();
       const featureClone = feature.clone();
-      source.addFeature(featureClone);
+      selectedSource.addFeature(featureClone);
+      pulseSource.addFeature(feature.clone());
     }
 
     // Center the map on the selected station

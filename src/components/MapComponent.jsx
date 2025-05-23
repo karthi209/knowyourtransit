@@ -312,6 +312,7 @@ const MapComponent = () => {
           position: relative;
           width: 100%;
           height: 100vh;
+          height: 100dvh; /* Use dynamic viewport height */
           overflow: hidden;
           touch-action: none;
         }
@@ -368,12 +369,17 @@ const MapComponent = () => {
             right: 0;
             bottom: 0;
             height: 100%;
+            height: 100dvh;
             width: 100%;
             overflow: hidden;
             touch-action: none;
+            margin: 0;
+            padding: 0;
           }
           .map {
             touch-action: none;
+            height: 100%;
+            width: 100%;
           }
           .ol-full-screen {
             top: auto;

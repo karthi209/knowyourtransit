@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search } from 'lucide-react';
+import { lineColors } from '../styles/LineStyles';
 
 const SearchBar = ({ onStationSelect, onLineSelect }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -166,6 +167,34 @@ const SearchBar = ({ onStationSelect, onLineSelect }) => {
     }
   };
 
+  const getLineColor = (lineName) => {
+    // Map the line names to match the format in LineStyles
+    const lineNameMap = {
+      'Blue Line': 'BlueLine',
+      'Green Line': 'GreenLine',
+      'Red Line': 'RedLine',
+      'Orange Line': 'OrangeLine',
+      'Purple Line': 'PurpleLine',
+      'MRTS': 'MRTSLine',
+      'South Line': 'SouthLine',
+      'West Line': 'WestLine',
+      'North Line': 'NorthLine'
+    };
+
+    const mappedName = lineNameMap[lineName] || lineName.replace(/\s+/g, "");
+    return lineColors[mappedName] || "#9E9E9E";
+  };
+
+  const getStationLineColors = (station) => {
+    if (!station.line) return ['#9E9E9E']; // Default gray if no line specified
+    
+    // Split the line string by comma and trim whitespace
+    const lines = station.line.split(',').map(line => line.trim());
+    
+    // Get colors for each line
+    return lines.map(line => getLineColor(line));
+  };
+
   return (
     <div className="absolute top-4 left-4 z-10 w-80">
       <div className="relative">
@@ -175,7 +204,6 @@ const SearchBar = ({ onStationSelect, onLineSelect }) => {
             value={searchTerm}
             onChange={(e) => {
               const newValue = e.target.value;
-              console.log('Search term changed to:', newValue);
               setSearchTerm(newValue);
               setShowResults(true);
             }}
@@ -197,9 +225,22 @@ const SearchBar = ({ onStationSelect, onLineSelect }) => {
                 className="w-full px-4 py-2 text-left hover:bg-gray-100 focus:outline-none focus:bg-gray-100"
               >
                 <div className="flex items-center">
-                  <span className={`inline-block w-2 h-2 rounded-full mr-2 ${
-                    item.type === 'station' ? 'bg-blue-500' : 'bg-green-500'
-                  }`}></span>
+                  {item.type === 'station' ? (
+                    <div className="flex gap-1 mr-2">
+                      {getStationLineColors(item).map((color, colorIndex) => (
+                        <span
+                          key={colorIndex}
+                          className="inline-block w-2 h-2 rounded-full"
+                          style={{ backgroundColor: color }}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <span 
+                      className="inline-block w-2 h-2 rounded-full mr-2"
+                      style={{ backgroundColor: getLineColor(item.name) }}
+                    />
+                  )}
                   <div>
                     <div className="font-medium text-gray-900">{item.name}</div>
                     {item.type === 'station' && item.name_ta && (

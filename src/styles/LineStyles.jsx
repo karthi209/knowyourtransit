@@ -20,11 +20,13 @@ const createMaterialShadow = (baseColor) => {
   return {
     primaryShadow: `rgba(${r}, ${g}, ${b}, 0.12)`,
     secondaryShadow: `rgba(${r}, ${g}, ${b}, 0.24)`,
-    glow: `rgba(${r}, ${g}, ${b}, 0.08)`
+    glow: `rgba(${r}, ${g}, ${b}, 0.08)`,
+    highlight: `rgba(${r}, ${g}, ${b}, 0.4)`,
+    pulse: `rgba(${r}, ${g}, ${b}, 0.2)`
   };
 };
 
-export const getFeatureStyle = (feature, currentZoom) => {
+export const getFeatureStyle = (feature, currentZoom, selectedLine = null) => {
   const lineName = feature.get("Name");
   if (!lineName) return new Style({});
 
@@ -37,44 +39,43 @@ export const getFeatureStyle = (feature, currentZoom) => {
   const zoomFactor = 0.35;
   const width = Math.max(baseWidth + (currentZoom - 10) * zoomFactor, 2);
 
-  const styles = [
-    // Outer glow with increased smoothing
-    // new Style({
-    //   stroke: new Stroke({
-    //     color: shadows.glow,
-    //     width: width * 3,
-    //     lineCap: "round",
-    //     lineJoin: "round",
-    //     miterLimit: 2,
-    //     lineDashOffset: 0,
-    //     lineDash: [],
-    //   }),
-    // }),
-    // Primary shadow with smoother edges
-    // new Style({
-    //   stroke: new Stroke({
-    //     color: shadows.primaryShadow,
-    //     width: width * 2,
-    //     lineCap: "round",
-    //     lineJoin: "round",
-    //     miterLimit: 2,
-    //     lineDashOffset: 0,
-    //     lineDash: [],
-    //   }),
-    // }),
-    // Main line with optimized smoothing
-    new Style({
-      stroke: new Stroke({
-        color: lineColor,
-        width: width,
-        lineCap: "round",
-        lineJoin: "round",
-        miterLimit: 2,
-        lineDashOffset: 0,
-        lineDash: [],
-      }),
+  // Create the base style
+  const baseStyle = new Style({
+    stroke: new Stroke({
+      color: lineColor,
+      width: width,
+      lineDash: selectedLine === lineName ? [] : [10, 5], // Solid line for selected, dashed for others
     }),
-  ];
+  });
 
-  return styles;
+  // If this is the selected line, add multiple glow effects for a pop effect
+  if (selectedLine === lineName) {
+    return [
+      // Outer pulse effect
+      new Style({
+        stroke: new Stroke({
+          color: shadows.pulse,
+          width: width + 8,
+        }),
+      }),
+      // Middle glow
+      new Style({
+        stroke: new Stroke({
+          color: shadows.highlight,
+          width: width + 6,
+        }),
+      }),
+      // Inner glow
+      new Style({
+        stroke: new Stroke({
+          color: shadows.glow,
+          width: width + 4,
+        }),
+      }),
+      // Base line
+      baseStyle,
+    ];
+  }
+
+  return baseStyle;
 };

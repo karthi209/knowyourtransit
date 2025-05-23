@@ -34,13 +34,15 @@ export const createVectorLayerStations = (mapInstance) => {
   });
 };
 
-export const vectorLayerLines = new VectorLayer({
-  source: createVectorSource("/data/lines.geojson"),
-  style: (feature, resolution) => {
-    const zoom = Math.log2(156543.03 / resolution); // Convert resolution to zoom
-    return getFeatureStyle(feature, zoom);
-  },
-});
+export const createVectorLayerLines = (selectedLine = null) => {
+  return new VectorLayer({
+    source: createVectorSource("/data/lines.geojson"),
+    style: (feature, resolution) => {
+      const zoom = Math.log2(156543.03 / resolution); // Convert resolution to zoom
+      return getFeatureStyle(feature, zoom, selectedLine);
+    },
+  });
+};
 
 export const vectorLayerStationLayouts = new VectorLayer({
   source: createVectorSource("/data/stationLayouts.geojson"),

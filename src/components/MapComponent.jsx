@@ -17,6 +17,7 @@ import { Feature } from "ol";
 import { Point } from "ol/geom";
 import LinePanel from "./LinePanel";
 import WelcomeAnimation from './WelcomeAnimation';
+import { getFeatureStyle } from "../styles/LineStyles";
 
 const MapComponent = () => {
   const { setSelectedStation, setSelectedLine } = useMapContext();
@@ -232,14 +233,18 @@ const MapComponent = () => {
 
     const map = mapInstanceRef.current;
     const oldLayer = linesLayerRef.current;
-    const newLayer = createVectorLayerLines(selectedLine);
-
-    const layers = map.getLayers();
-    const index = layers.getArray().indexOf(oldLayer);
-    if (index !== -1) {
-      layers.setAt(index, newLayer);
-      linesLayerRef.current = newLayer;
-    }
+    
+    // Instead of replacing the layer, update its style
+    oldLayer.setStyle((feature, resolution) => {
+      const zoom = Math.log2(156543.03 / resolution);
+      return getFeatureStyle(feature, zoom, selectedLine);
+    });
+    
+    // Force a refresh of the layer
+    oldLayer.changed();
+    
+    // Update the reference
+    linesLayerRef.current = oldLayer;
   }, [selectedLine]);
 
   const handleTouchStart = (e) => {
@@ -518,7 +523,10 @@ const MapComponent = () => {
           extent[3] + height * padding
         ];
 
-        // Animate to the line extent
+        // First update the selected line state
+        setSelectedLineState(line.name);
+
+        // Then animate to the line extent
         map.getView().fit(paddedExtent, {
           duration: 1000,
           padding: [100, 100, 100, 100],
@@ -531,8 +539,6 @@ const MapComponent = () => {
       }
     }
 
-    // Update UI state
-    setSelectedLineState(line.name);
     // Show slide-up panel on mobile
     const isMobile = window.innerWidth <= 768;
     if (isMobile) {
@@ -773,7 +779,7 @@ const MapComponent = () => {
         </button>
       </div>
 
-      <style>{`
+      <style jsx="true">{`
         @import url('https://fonts.googleapis.com/icon?family=Material+Icons');
         @import url('https://fonts.googleapis.com/css2?family=Cabin:wght@400;500;600;700&family=Noto+Sans+Tamil:wght@400;500;600;700&display=swap');
 

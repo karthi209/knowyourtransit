@@ -35,13 +35,16 @@ export const createVectorLayerStations = (mapInstance) => {
 };
 
 export const createVectorLayerLines = (selectedLine = null) => {
-  return new VectorLayer({
-  source: createVectorSource("/data/lines.geojson"),
-  style: (feature, resolution) => {
-    const zoom = Math.log2(156543.03 / resolution); // Convert resolution to zoom
+  const layer = new VectorLayer({
+    source: createVectorSource("/data/lines.geojson"),
+    style: (feature, resolution) => {
+      const zoom = Math.log2(156543.03 / resolution); // Convert resolution to zoom
       return getFeatureStyle(feature, zoom, selectedLine);
-  },
-});
+    },
+    updateWhileAnimating: true, // Update style during animations
+    updateWhileInteracting: true // Update style during interactions
+  });
+  return layer;
 };
 
 export const vectorLayerStationLayouts = new VectorLayer({

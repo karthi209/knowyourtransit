@@ -569,19 +569,52 @@ const MapComponent = () => {
         isDarkTheme={isDarkTheme}
       />
       
-      {/* Station Popup (Desktop) */}
-      <div
-        ref={stationPopupRef}
-        className={`station-popup rounded-lg p-5 inline-block w-auto ${isDarkTheme ? 'dark-theme' : ''} hidden md:block`}
-        style={{
-          pointerEvents: "auto",
-          fontSize: "13px",
-          display: selectedStation && !showStationPanel ? "block" : "none",
-          whiteSpace: "nowrap"
-        }}
-      >
-        <StationPopup selectedStation={selectedStation} onMoreDetailsClick={handleMoreDetailsClick} isDarkTheme={isDarkTheme} />
-      </div>
+      {/* Station Panel (Desktop) */}
+      {selectedStation && !showStationPanel && (
+        <div
+          ref={stationPopupRef}
+          className={`fixed top-0 right-0 h-full z-50 hidden md:block`}
+          style={{
+            width: '400px',
+            maxWidth: '40vw',
+            transition: 'transform 0.3s ease-out'
+          }}
+        >
+          <div 
+            className={`h-full shadow-lg ${isDarkTheme ? 'bg-[#1a1a1a]' : 'bg-white'}`}
+          >
+            {/* Header with close button */}
+            <div className={`w-full h-12 flex items-center justify-between px-4 ${isDarkTheme ? 'bg-[#2a2a2a]' : 'bg-white'} flex-shrink-0 border-b ${isDarkTheme ? 'border-gray-700' : 'border-gray-200'}`}>
+              <div className={`text-lg font-medium ${isDarkTheme ? 'text-white' : 'text-gray-900'}`}>Station Details</div>
+              <button 
+                onClick={() => {
+                  if (overlayRef.current) {
+                    overlayRef.current.setPosition(undefined);
+                  }
+                }}
+                className={`p-2 rounded-full ${isDarkTheme ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
+              >
+                <span className={`material-icons ${isDarkTheme ? 'text-gray-300' : 'text-gray-600'}`}>close</span>
+              </button>
+            </div>
+            
+            {/* Panel content */}
+            <div className={`flex-1 overflow-y-auto ${isDarkTheme ? 'text-white' : 'text-gray-900'} ${isDarkTheme ? 'bg-[#1a1a1a]' : 'bg-white'}`}>
+              <StationPanel
+                selectedStation={selectedStation}
+                onClose={() => {
+                  if (overlayRef.current) {
+                    overlayRef.current.setPosition(undefined);
+                  }
+                }}
+                onStationClick={handleStationClick}
+                stationSequences={stationSequences}
+                isDarkTheme={isDarkTheme}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Station Panel (Mobile) */}
       {showStationPanel && (
@@ -598,14 +631,13 @@ const MapComponent = () => {
             className={`bg-white dark:bg-[#1a1a1a] rounded-t-2xl shadow-lg transform transition-transform duration-300 ease-in-out ${isDarkTheme ? 'dark-theme' : ''}`}
             style={{ 
               height: '100%',
-              backgroundColor: isDarkTheme ? '#1a1a1a' : '#ffffff',
               display: 'flex',
               flexDirection: 'column'
             }}
           >
             {/* Drag handle - made larger and more prominent */}
             <div 
-              className={`w-full h-12 flex items-center justify-center cursor-grab active:cursor-grabbing touch-none ${isDarkTheme ? 'bg-[#2a2a2a]' : 'bg-gray-50'} rounded-t-2xl flex-shrink-0`}
+              className={`w-full h-12 flex items-center justify-center cursor-grab active:cursor-grabbing touch-none ${isDarkTheme ? 'bg-[#2a2a2a]' : 'bg-gray-100'} rounded-t-2xl flex-shrink-0 border-b ${isDarkTheme ? 'border-gray-700' : 'border-gray-200'}`}
               onTouchStart={handleTouchStart}
               onTouchMove={handleTouchMove}
               onTouchEnd={handleTouchEnd}
@@ -616,14 +648,14 @@ const MapComponent = () => {
             {/* Panel content - only show when panel is not minimized */}
             {panelHeight > 40 && (
               <div className="text-gray-900 dark:text-white flex-1 overflow-y-auto">
-        <StationPanel
-          selectedStation={selectedStation}
+                <StationPanel
+                  selectedStation={selectedStation}
                   onClose={() => {
                     setShowStationPanel(false);
                     setPanelHeight(0);
                   }}
-          onStationClick={handleStationClick}
-          stationSequences={stationSequences}
+                  onStationClick={handleStationClick}
+                  stationSequences={stationSequences}
                   isDarkTheme={isDarkTheme}
                 />
               </div>
@@ -763,13 +795,9 @@ const MapComponent = () => {
           }
         }
 
-        /* Station popup styling */
+        /* Remove old popup styles */
         .station-popup {
-          position: absolute;
-          z-index: 10000;
-          background-color: white;
-          border-radius: 4px;
-          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+          display: none;
         }
 
         /* Station panel styling */
@@ -780,7 +808,6 @@ const MapComponent = () => {
         }
 
         .dark-theme.station-panel {
-          background-color: #1a1a1a;
           color: #f3f4f6; /* text-gray-100 for dark theme */
         }
 
@@ -909,3 +936,4 @@ const MapComponent = () => {
 };
 
 export default MapComponent;
+

@@ -15,6 +15,7 @@ import { Vector as VectorSource } from "ol/source";
 import { Style, Fill, Circle, Stroke } from "ol/style";
 import { Feature } from "ol";
 import { Point } from "ol/geom";
+import LinePanel from "./LinePanel";
 
 const MapComponent = () => {
   const { setSelectedStation, setSelectedLine } = useMapContext();
@@ -29,6 +30,8 @@ const MapComponent = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [startY, setStartY] = useState(0);
   const [currentY, setCurrentY] = useState(0);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showSearchResults, setShowSearchResults] = useState(false);
 
   const mapContainerRef = useRef(null);
   const mapInstanceRef = useRef(null);
@@ -478,44 +481,63 @@ const MapComponent = () => {
     const map = mapInstanceRef.current;
     if (!map) return;
 
-    const coordinates = line.coordinates.map(coord => fromLonLat(coord));
-    const extent = coordinates.reduce((extent, coord) => {
-      return [
-        Math.min(extent[0], coord[0]),
-        Math.min(extent[1], coord[1]),
-        Math.max(extent[2], coord[0]),
-        Math.max(extent[3], coord[1])
-      ];
-    }, [Infinity, Infinity, -Infinity, -Infinity]);
+    // Find the line coordinates from the lines layer
+    const linesLayer = linesLayerRef.current;
+    if (linesLayer) {
+      const source = linesLayer.getSource();
+      const features = source.getFeatures();
+      const lineFeature = features.find(f => f.get('name') === line.name);
+      
+      if (lineFeature) {
+        const coordinates = lineFeature.getGeometry().getCoordinates();
+        const extent = coordinates.reduce((extent, coord) => {
+          return [
+            Math.min(extent[0], coord[0]),
+            Math.min(extent[1], coord[1]),
+            Math.max(extent[2], coord[0]),
+            Math.max(extent[3], coord[1])
+          ];
+        }, [Infinity, Infinity, -Infinity, -Infinity]);
 
-    const padding = 0.1;
-    const width = extent[2] - extent[0];
-    const height = extent[3] - extent[1];
-    const paddedExtent = [
-      extent[0] - width * padding,
-      extent[1] - height * padding,
-      extent[2] + width * padding,
-      extent[3] + height * padding
-    ];
+        const padding = 0.1;
+        const width = extent[2] - extent[0];
+        const height = extent[3] - extent[1];
+        const paddedExtent = [
+          extent[0] - width * padding,
+          extent[1] - height * padding,
+          extent[2] + width * padding,
+          extent[3] + height * padding
+        ];
 
-    map.getView().animate({
-      center: map.getView().getCenter(),
-      zoom: map.getView().getZoom() - 1,
-      duration: 500
-    }, () => {
-      map.getView().fit(paddedExtent, {
-        duration: 1000,
-        padding: [50, 50, 50, 50],
-        easing: (t) => {
-          return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
-        }
-      });
-    });
+        map.getView().animate({
+          center: map.getView().getCenter(),
+          zoom: map.getView().getZoom() - 1,
+          duration: 500
+        }, () => {
+          map.getView().fit(paddedExtent, {
+            duration: 1000,
+            padding: [50, 50, 50, 50],
+            easing: (t) => {
+              return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+            }
+          });
+        });
+      }
+    }
 
-    setTimeout(() => {
-      setSelectedLineState(line.name);
-      setSelectedLine(line.name);
-    }, 300);
+    // Update UI state
+    setSelectedLineState(line.name);
+    // Show slide-up panel on mobile
+    const isMobile = window.innerWidth <= 768;
+    if (isMobile) {
+      setShowStationPanel(true);
+      setPanelHeight(window.innerHeight * 0.6);
+    } else {
+      setShowStationPanel(false);
+    }
+    setSelectedStationState(null);
+    setSearchQuery("");
+    setShowSearchResults(false);
   };
 
   const toggleSatelliteView = () => {
@@ -618,6 +640,43 @@ const MapComponent = () => {
         </div>
       )}
 
+      {/* Line Panel (Desktop) */}
+      {selectedLine && !showStationPanel && (
+        <div
+          className={`fixed top-0 right-0 h-full z-50 hidden md:block`}
+          style={{
+            width: '400px',
+            maxWidth: '40vw',
+            transition: 'transform 0.3s ease-out'
+          }}
+        >
+          <div 
+            className={`h-full flex flex-col ${isDarkTheme ? 'bg-[#1a1a1a]' : 'bg-white'} shadow-lg`}
+          >
+            {/* Header with close button */}
+            <div className={`w-full h-12 flex items-center justify-between px-4 ${isDarkTheme ? 'bg-[#2a2a2a]' : 'bg-white'} flex-shrink-0 border-b ${isDarkTheme ? 'border-gray-700' : 'border-gray-200'}`}>
+              <div className={`text-lg font-medium ${isDarkTheme ? 'text-white' : 'text-gray-900'}`}>Line Details</div>
+              <button 
+                onClick={() => setSelectedLineState(null)}
+                className={`p-2 rounded-full ${isDarkTheme ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
+              >
+                <span className={`material-icons ${isDarkTheme ? 'text-gray-300' : 'text-gray-600'}`}>close</span>
+              </button>
+            </div>
+            
+            {/* Panel content - make it scrollable */}
+            <div className={`flex-1 overflow-y-auto ${isDarkTheme ? 'text-white' : 'text-gray-900'}`}>
+              <LinePanel
+                selectedLine={selectedLine}
+                onClose={() => setSelectedLineState(null)}
+                stationSequences={stationSequences}
+                isDarkTheme={isDarkTheme}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Station Panel (Mobile) */}
       {showStationPanel && (
         <div 
@@ -630,7 +689,7 @@ const MapComponent = () => {
           }}
         >
           <div 
-            className={`bg-white dark:bg-[#1a1a1a] rounded-t-2xl shadow-lg transform transition-transform duration-300 ease-in-out ${isDarkTheme ? 'dark-theme' : ''}`}
+            className={`${isDarkTheme ? 'bg-[#1a1a1a]' : 'bg-white'} rounded-t-2xl shadow-lg transform transition-transform duration-300 ease-in-out`}
             style={{ 
               height: '100%',
               display: 'flex',
@@ -657,6 +716,54 @@ const MapComponent = () => {
                     setPanelHeight(0);
                   }}
                   onStationClick={handleStationClick}
+                  stationSequences={stationSequences}
+                  isDarkTheme={isDarkTheme}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Line Panel (Mobile) */}
+      {selectedLine && showStationPanel && (
+        <div 
+          ref={panelRef}
+          className="fixed inset-x-0 bottom-0 z-50 md:hidden"
+          style={{
+            height: `${panelHeight}px`,
+            transition: isDragging ? 'none' : 'height 0.3s ease-out',
+            backgroundColor: 'transparent'
+          }}
+        >
+          <div 
+            className={`${isDarkTheme ? 'bg-[#1a1a1a]' : 'bg-white'} rounded-t-2xl shadow-lg transform transition-transform duration-300 ease-in-out`}
+            style={{ 
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column'
+            }}
+          >
+            {/* Drag handle */}
+            <div 
+              className={`w-full h-12 flex items-center justify-center cursor-grab active:cursor-grabbing touch-none ${isDarkTheme ? 'bg-[#2a2a2a]' : 'bg-white'} rounded-t-2xl flex-shrink-0 border-b ${isDarkTheme ? 'border-gray-700' : 'border-gray-200'}`}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+            >
+              <div className={`w-12 h-1 ${isDarkTheme ? 'bg-gray-600' : 'bg-gray-300'} rounded-full`}></div>
+            </div>
+            
+            {/* Panel content - only show when panel is not minimized */}
+            {panelHeight > 40 && (
+              <div className={`flex-1 overflow-y-auto ${isDarkTheme ? 'text-white' : 'text-gray-900'}`}>
+                <LinePanel
+                  selectedLine={selectedLine}
+                  onClose={() => {
+                    setShowStationPanel(false);
+                    setPanelHeight(0);
+                    setSelectedLineState(null);
+                  }}
                   stationSequences={stationSequences}
                   isDarkTheme={isDarkTheme}
                 />
@@ -848,48 +955,10 @@ const MapComponent = () => {
             width: 100%;
           }
 
-          .station-panel {
-            height: 100%;
-            overflow-y: auto;
-            -webkit-overflow-scrolling: touch;
-            padding-bottom: env(safe-area-inset-bottom);
-            background-color: white;
-            user-select: none;
-            -webkit-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
-            touch-action: pan-y pinch-zoom;
-            overscroll-behavior: contain;
-          }
-
-          /* Add a visible handle at the bottom when panel is minimized */
+          /* Remove any background overlay */
+          .station-panel::before,
           .station-panel::after {
-            content: '';
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 20px;
-            background: linear-gradient(to bottom, transparent, rgba(0, 0, 0, 0.1));
-            pointer-events: none;
-          }
-
-          .dark-theme.station-panel::after {
-            background: linear-gradient(to bottom, transparent, rgba(255, 255, 255, 0.1));
-          }
-
-          /* Improve scrolling behavior */
-          .station-panel > * {
-            overscroll-behavior: contain;
-          }
-
-          /* Remove the bluish gray background */
-          .bg-gray-50 {
-            background-color: white !important;
-          }
-
-          .dark-theme .bg-gray-50 {
-            background-color: #1a1a1a !important;
+            display: none;
           }
 
           /* Ensure text colors in mobile panel */
@@ -897,20 +966,16 @@ const MapComponent = () => {
           .station-panel h3,
           .station-panel p,
           .station-panel span {
-            color: #111827 !important; /* text-gray-900 */
+            color: inherit !important;
           }
 
-          .dark-theme.station-panel h2,
-          .dark-theme.station-panel h3,
-          .dark-theme.station-panel p,
-          .dark-theme.station-panel span {
-            color: #f3f4f6 !important; /* text-gray-100 */
+          /* Remove the bluish gray background */
+          .bg-gray-50 {
+            background-color: transparent !important;
           }
 
-          /* Remove any background overlay */
-          .station-panel::before,
-          .station-panel::after {
-            display: none;
+          .dark-theme .bg-gray-50 {
+            background-color: transparent !important;
           }
         }
 

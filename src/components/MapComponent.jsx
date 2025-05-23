@@ -593,6 +593,26 @@ const MapComponent = () => {
     };
   }, []);
 
+  const handleLinePanelStationClick = (station) => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+
+    // Find the station feature
+    const vectorLayerStations = map.getLayers().getArray().find(layer => 
+      layer instanceof VectorLayer && layer.getSource().getUrl() === "/data/stations.geojson"
+    );
+
+    if (vectorLayerStations) {
+      const source = vectorLayerStations.getSource();
+      const features = source.getFeatures();
+      const stationFeature = features.find(f => f.get('name') === station.name);
+      
+      if (stationFeature) {
+        handleStationClick(stationFeature);
+      }
+    }
+  };
+
   return (
     <div className={`map-container ${isDarkTheme ? 'dark-theme' : ''} ${isFullscreen ? 'fullscreen' : ''}`}>
       {showWelcome && (
@@ -679,8 +699,12 @@ const MapComponent = () => {
               <LinePanel
                 selectedLine={selectedLine}
                 onClose={() => setSelectedLineState(null)}
-                stationSequences={stationSequences}
+                stationSequences={Object.entries(stationSequences).map(([line, stations]) => ({
+                  line,
+                  stations: stations.map(name => ({ name }))
+                }))}
                 isDarkTheme={true}
+                onStationClick={handleLinePanelStationClick}
               />
             </div>
           </div>
@@ -737,8 +761,12 @@ const MapComponent = () => {
                       setShowStationPanel(false);
                       setPanelHeight(0);
                     }}
-                    stationSequences={stationSequences}
+                    stationSequences={Object.entries(stationSequences).map(([line, stations]) => ({
+                      line,
+                      stations: stations.map(name => ({ name }))
+                    }))}
                     isDarkTheme={true}
+                    onStationClick={handleLinePanelStationClick}
                   />
                 ) : null}
               </div>

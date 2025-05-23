@@ -1,15 +1,26 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Search } from 'lucide-react';
 import { lineColors } from '../styles/LineStyles';
 
-const SearchBar = ({ onStationSelect, onLineSelect }) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [searchResults, setSearchResults] = useState([]);
+const SearchBar = ({ onStationSelect, onLineSelect, isDarkTheme }) => {
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState([]);
   const [showResults, setShowResults] = useState(false);
+  const searchRef = useRef(null);
   const [stations, setStations] = useState([]);
   const [lines, setLines] = useState([]);
 
-  // Load stations and lines data once when component mounts
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (searchRef.current && !searchRef.current.contains(event.target)) {
+        setShowResults(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -115,17 +126,16 @@ const SearchBar = ({ onStationSelect, onLineSelect }) => {
     fetchData();
   }, []);
 
-  // Filter stations and lines based on search term
   useEffect(() => {
-    if (searchTerm.length > 0) {
-      console.log('Searching for:', searchTerm);
+    if (query.length > 0) {
+      console.log('Searching for:', query);
       
       const filteredStations = stations.filter(station => {
         if (!station || !station.name) return false;
         
-        const nameMatch = station.name.toLowerCase().includes(searchTerm.toLowerCase());
+        const nameMatch = station.name.toLowerCase().includes(query.toLowerCase());
         const tamilMatch = station.name_ta && 
-          station.name_ta.toLowerCase().includes(searchTerm.toLowerCase());
+          station.name_ta.toLowerCase().includes(query.toLowerCase());
         
         return nameMatch || tamilMatch;
       });
@@ -133,9 +143,9 @@ const SearchBar = ({ onStationSelect, onLineSelect }) => {
       const filteredLines = lines.filter(line => {
         if (!line || !line.name) return false;
         
-        const nameMatch = line.name.toLowerCase().includes(searchTerm.toLowerCase());
+        const nameMatch = line.name.toLowerCase().includes(query.toLowerCase());
         const descMatch = line.description && 
-          line.description.toLowerCase().includes(searchTerm.toLowerCase());
+          line.description.toLowerCase().includes(query.toLowerCase());
         
         return nameMatch || descMatch;
       });
@@ -145,25 +155,18 @@ const SearchBar = ({ onStationSelect, onLineSelect }) => {
         ...filteredLines.map(l => ({ ...l, type: 'line' }))
       ];
       
-      setSearchResults(combinedResults);
+      setResults(combinedResults);
     } else {
-      setSearchResults([]);
+      setResults([]);
     }
-  }, [searchTerm, stations, lines]);
+  }, [query, stations, lines]);
 
-  const handleSelect = (item) => {
-    if (item.type === 'station') {
-      onStationSelect(item);
-    } else if (item.type === 'line') {
-      onLineSelect(item);
-    }
-    setSearchTerm('');
-    setShowResults(false);
-  };
-
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && searchResults.length > 0) {
-      handleSelect(searchResults[0]);
+  const handleSearch = (value) => {
+    setQuery(value);
+    if (value.length > 0) {
+      setShowResults(true);
+    } else {
+      setShowResults(false);
     }
   };
 
@@ -196,69 +199,79 @@ const SearchBar = ({ onStationSelect, onLineSelect }) => {
   };
 
   return (
-    <div className="absolute top-4 left-4 z-10 w-80">
+    <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-xl px-4" ref={searchRef}>
       <div className="relative">
         <div className="relative">
           <input
             type="text"
-            value={searchTerm}
-            onChange={(e) => {
-              const newValue = e.target.value;
-              setSearchTerm(newValue);
-              setShowResults(true);
-            }}
-            onKeyDown={handleKeyDown}
-            onFocus={() => setShowResults(true)}
-            onBlur={() => setTimeout(() => setShowResults(false), 200)}
+            value={query}
+            onChange={(e) => handleSearch(e.target.value)}
             placeholder="Search stations or lines..."
-            className="w-full px-4 py-2 pl-10 pr-4 text-sm border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full h-12 pl-12 pr-4 rounded-lg bg-black/80 backdrop-blur-sm border border-white/10 text-white placeholder-white/40 focus:outline-none focus:border-white/20 transition-colors"
           />
-          <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+          <span className="material-icons absolute left-4 top-1/2 transform -translate-y-1/2 text-white/40">
+            search
+          </span>
         </div>
-        
-        {showResults && searchResults.length > 0 && (
-          <div className="absolute w-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 max-h-96 overflow-y-auto">
-            {searchResults.map((item, index) => (
-              <button
+
+        {showResults && results.length > 0 && (
+          <div className="absolute w-full mt-2 rounded-lg bg-black/90 backdrop-blur-sm border border-white/10 shadow-lg overflow-hidden">
+            {results.map((result, index) => (
+              <div
                 key={index}
-                onClick={() => handleSelect(item)}
-                className="w-full px-4 py-2 text-left hover:bg-gray-100 focus:outline-none focus:bg-gray-100"
+                className="px-4 py-3 hover:bg-white/5 cursor-pointer transition-colors border-b border-white/5 last:border-b-0"
+                onClick={() => {
+                  if (result.type === 'station') {
+                    onStationSelect(result);
+                  } else {
+                    onLineSelect(result);
+                  }
+                  setShowResults(false);
+                  setQuery('');
+                }}
               >
-                <div className="flex items-center">
-                  {item.type === 'station' ? (
-                    <div className="flex gap-1 mr-2">
-                      {getStationLineColors(item).map((color, colorIndex) => (
+                <div className="flex items-center space-x-3">
+                  {result.type === 'station' ? (
+                    <div className="flex gap-1">
+                      {getStationLineColors(result).map((color, colorIndex) => (
                         <span
                           key={colorIndex}
-                          className="inline-block w-2 h-2 rounded-full"
+                          className="w-2 h-2 rounded-full"
                           style={{ backgroundColor: color }}
                         />
                       ))}
                     </div>
                   ) : (
                     <span 
-                      className="inline-block w-2 h-2 rounded-full mr-2"
-                      style={{ backgroundColor: getLineColor(item.name) }}
+                      className="w-2 h-2 rounded-full"
+                      style={{ backgroundColor: getLineColor(result.name) }}
                     />
                   )}
                   <div>
-                    <div className="font-medium text-gray-900">{item.name}</div>
-                    {item.type === 'station' && item.name_ta && (
-                      <div className="text-sm text-gray-500">{item.name_ta}</div>
-                    )}
-                    {item.type === 'line' && item.description && (
-                      <div className="text-sm text-gray-500">{item.description}</div>
-                    )}
-                    <div className="text-xs text-gray-400">
-                      {item.type === 'station' ? item.line : 'Metro Line'}
+                    <div className="text-white/90 font-medium">{result.name}</div>
+                    <div className="text-white/40 text-sm">
+                      {result.type === 'station' ? 'Station' : 'Line'}
                     </div>
                   </div>
                 </div>
-              </button>
+              </div>
             ))}
           </div>
         )}
       </div>
+
+      <style jsx>{`
+        @import url('https://fonts.googleapis.com/icon?family=Material+Icons');
+        @import url('https://fonts.googleapis.com/css2?family=Cabin:wght@400;500;600;700&family=Noto+Sans+Tamil:wght@400;500;600;700&display=swap');
+
+        input {
+          font-family: "Cabin", "Noto Sans Tamil", serif;
+        }
+
+        input::placeholder {
+          font-family: "Cabin", "Noto Sans Tamil", serif;
+        }
+      `}</style>
     </div>
   );
 };

@@ -16,6 +16,7 @@ import { Style, Fill, Circle, Stroke } from "ol/style";
 import { Feature } from "ol";
 import { Point } from "ol/geom";
 import LinePanel from "./LinePanel";
+import WelcomeAnimation from './WelcomeAnimation';
 
 const MapComponent = () => {
   const { setSelectedStation, setSelectedLine } = useMapContext();
@@ -24,7 +25,7 @@ const MapComponent = () => {
   const [coordinate, setCoordinate] = useState(null);
   const [showStationPanel, setShowStationPanel] = useState(false);
   const [isSatellite, setIsSatellite] = useState(false);
-  const [isDarkTheme, setIsDarkTheme] = useState(false);
+  const [isDarkTheme, setIsDarkTheme] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [panelHeight, setPanelHeight] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -32,6 +33,7 @@ const MapComponent = () => {
   const [currentY, setCurrentY] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearchResults, setShowSearchResults] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(true);
 
   const mapContainerRef = useRef(null);
   const mapInstanceRef = useRef(null);
@@ -52,6 +54,7 @@ const MapComponent = () => {
       source: new XYZ({
         url: "https://{a-c}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}@2x.png",
       }),
+      visible: false,
     });
     lightBaseLayerRef.current = lightBaseLayer;
 
@@ -59,7 +62,7 @@ const MapComponent = () => {
       source: new XYZ({
         url: "https://{a-c}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}@2x.png",
       }),
-      visible: false,
+      visible: true,
     });
     darkBaseLayerRef.current = darkBaseLayer;
 
@@ -277,6 +280,9 @@ const MapComponent = () => {
 
     if (!properties || !properties.name) return;
 
+    // Clear any existing line selection
+    setSelectedLineState(null);
+
     const station = {
       name: properties.name,
       name_ta: properties.name_ta || "N/A",
@@ -353,8 +359,8 @@ const MapComponent = () => {
       }
     } else {
       setShowStationPanel(false);
-    if (overlayRef.current) {
-      overlayRef.current.setPosition(feature.getGeometry().getCoordinates());
+      if (overlayRef.current) {
+        overlayRef.current.setPosition(feature.getGeometry().getCoordinates());
       }
     }
   };
@@ -481,25 +487,28 @@ const MapComponent = () => {
     const map = mapInstanceRef.current;
     if (!map) return;
 
+    // Clear any existing station selection first
+    setSelectedStationState(null);
+    if (overlayRef.current) {
+      overlayRef.current.setPosition(undefined);
+    }
+
     // Find the line coordinates from the lines layer
     const linesLayer = linesLayerRef.current;
     if (linesLayer) {
       const source = linesLayer.getSource();
       const features = source.getFeatures();
-      const lineFeature = features.find(f => f.get('name') === line.name);
+      const lineFeature = features.find(f => f.get('Name') === line.name);
       
       if (lineFeature) {
-        const coordinates = lineFeature.getGeometry().getCoordinates();
-        const extent = coordinates.reduce((extent, coord) => {
-          return [
-            Math.min(extent[0], coord[0]),
-            Math.min(extent[1], coord[1]),
-            Math.max(extent[2], coord[0]),
-            Math.max(extent[3], coord[1])
-          ];
-        }, [Infinity, Infinity, -Infinity, -Infinity]);
-
-        const padding = 0.1;
+        // Get the line geometry
+        const geometry = lineFeature.getGeometry();
+        
+        // Get the extent of the line
+        const extent = geometry.getExtent();
+        
+        // Add padding to the extent
+        const padding = 0.2; // 20% padding
         const width = extent[2] - extent[0];
         const height = extent[3] - extent[1];
         const paddedExtent = [
@@ -509,18 +518,15 @@ const MapComponent = () => {
           extent[3] + height * padding
         ];
 
-        map.getView().animate({
-          center: map.getView().getCenter(),
-          zoom: map.getView().getZoom() - 1,
-          duration: 500
-        }, () => {
-          map.getView().fit(paddedExtent, {
-            duration: 1000,
-            padding: [50, 50, 50, 50],
-            easing: (t) => {
-              return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
-            }
-          });
+        // Animate to the line extent
+        map.getView().fit(paddedExtent, {
+          duration: 1000,
+          padding: [100, 100, 100, 100],
+          maxZoom: 14,
+          minZoom: 10,
+          easing: (t) => {
+            return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+          }
         });
       }
     }
@@ -535,7 +541,6 @@ const MapComponent = () => {
     } else {
       setShowStationPanel(false);
     }
-    setSelectedStationState(null);
     setSearchQuery("");
     setShowSearchResults(false);
   };
@@ -584,30 +589,31 @@ const MapComponent = () => {
 
   return (
     <div className={`map-container ${isDarkTheme ? 'dark-theme' : ''} ${isFullscreen ? 'fullscreen' : ''}`}>
+      {showWelcome && (
+        <WelcomeAnimation onAnimationComplete={() => setShowWelcome(false)} />
+      )}
       <div id="map" className="map" ref={mapContainerRef}></div>
       <SearchBar 
         onStationSelect={handleSearchStationSelect} 
         onLineSelect={handleSearchLineSelect}
-        isDarkTheme={isDarkTheme}
+        isDarkTheme={true}
       />
       
       {/* Station Panel (Desktop) */}
       {selectedStation && !showStationPanel && (
         <div
           ref={stationPopupRef}
-          className={`fixed top-0 right-0 h-full z-50 hidden md:block`}
+          className="fixed top-0 right-0 h-full z-50 hidden md:block"
           style={{
             width: '400px',
             maxWidth: '40vw',
             transition: 'transform 0.3s ease-out'
           }}
         >
-          <div 
-            className={`h-full flex flex-col ${isDarkTheme ? 'bg-[#1a1a1a]' : 'bg-white'} shadow-lg`}
-          >
+          <div className="h-full flex flex-col bg-black/95 backdrop-blur-sm border-l border-white/10">
             {/* Header with close button */}
-            <div className={`w-full h-12 flex items-center justify-between px-4 ${isDarkTheme ? 'bg-[#2a2a2a]' : 'bg-white'} flex-shrink-0 border-b ${isDarkTheme ? 'border-gray-700' : 'border-gray-200'}`}>
-              <div className={`text-lg font-medium ${isDarkTheme ? 'text-white' : 'text-gray-900'}`}>Station Details</div>
+            <div className="w-full h-12 flex items-center justify-between px-4 bg-black/50 border-b border-white/10">
+              <div className="text-lg font-medium text-white">Station Details</div>
               <button 
                 onClick={() => {
                   setSelectedStationState(null);
@@ -615,14 +621,14 @@ const MapComponent = () => {
                     overlayRef.current.setPosition(undefined);
                   }
                 }}
-                className={`p-2 rounded-full ${isDarkTheme ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
+                className="p-2 rounded-full hover:bg-white/10 transition-colors"
               >
-                <span className={`material-icons ${isDarkTheme ? 'text-gray-300' : 'text-gray-600'}`}>close</span>
+                <span className="material-icons text-white/60">close</span>
               </button>
             </div>
             
-            {/* Panel content - make it scrollable */}
-            <div className={`flex-1 overflow-y-auto ${isDarkTheme ? 'text-white' : 'text-gray-900'}`}>
+            {/* Panel content */}
+            <div className="flex-1 overflow-y-auto text-white/80">
               <StationPanel
                 selectedStation={selectedStation}
                 onClose={() => {
@@ -633,7 +639,7 @@ const MapComponent = () => {
                 }}
                 onStationClick={handleStationClick}
                 stationSequences={stationSequences}
-                isDarkTheme={isDarkTheme}
+                isDarkTheme={true}
               />
             </div>
           </div>
@@ -643,41 +649,39 @@ const MapComponent = () => {
       {/* Line Panel (Desktop) */}
       {selectedLine && !showStationPanel && (
         <div
-          className={`fixed top-0 right-0 h-full z-50 hidden md:block`}
+          className="fixed top-0 right-0 h-full z-50 hidden md:block"
           style={{
             width: '400px',
             maxWidth: '40vw',
             transition: 'transform 0.3s ease-out'
           }}
         >
-          <div 
-            className={`h-full flex flex-col ${isDarkTheme ? 'bg-[#1a1a1a]' : 'bg-white'} shadow-lg`}
-          >
+          <div className="h-full flex flex-col bg-black/95 backdrop-blur-sm border-l border-white/10">
             {/* Header with close button */}
-            <div className={`w-full h-12 flex items-center justify-between px-4 ${isDarkTheme ? 'bg-[#2a2a2a]' : 'bg-white'} flex-shrink-0 border-b ${isDarkTheme ? 'border-gray-700' : 'border-gray-200'}`}>
-              <div className={`text-lg font-medium ${isDarkTheme ? 'text-white' : 'text-gray-900'}`}>Line Details</div>
+            <div className="w-full h-12 flex items-center justify-between px-4 bg-black/50 border-b border-white/10">
+              <div className="text-lg font-medium text-white">Line Details</div>
               <button 
                 onClick={() => setSelectedLineState(null)}
-                className={`p-2 rounded-full ${isDarkTheme ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
+                className="p-2 rounded-full hover:bg-white/10 transition-colors"
               >
-                <span className={`material-icons ${isDarkTheme ? 'text-gray-300' : 'text-gray-600'}`}>close</span>
+                <span className="material-icons text-white/60">close</span>
               </button>
             </div>
-            
-            {/* Panel content - make it scrollable */}
-            <div className={`flex-1 overflow-y-auto ${isDarkTheme ? 'text-white' : 'text-gray-900'}`}>
+
+            {/* Panel content */}
+            <div className="flex-1 overflow-y-auto text-white/80">
               <LinePanel
                 selectedLine={selectedLine}
                 onClose={() => setSelectedLineState(null)}
                 stationSequences={stationSequences}
-                isDarkTheme={isDarkTheme}
+                isDarkTheme={true}
               />
             </div>
           </div>
         </div>
       )}
 
-      {/* Station Panel (Mobile) */}
+      {/* Mobile Panels */}
       {showStationPanel && (
         <div 
           ref={panelRef}
@@ -689,7 +693,7 @@ const MapComponent = () => {
           }}
         >
           <div 
-            className={`${isDarkTheme ? 'bg-[#1a1a1a]' : 'bg-white'} rounded-t-2xl shadow-lg transform transition-transform duration-300 ease-in-out`}
+            className="bg-black/95 backdrop-blur-sm rounded-t-2xl border-t border-white/10"
             style={{ 
               height: '100%',
               display: 'flex',
@@ -698,106 +702,71 @@ const MapComponent = () => {
           >
             {/* Drag handle */}
             <div 
-              className={`w-full h-12 flex items-center justify-center cursor-grab active:cursor-grabbing touch-none ${isDarkTheme ? 'bg-[#2a2a2a]' : 'bg-white'} rounded-t-2xl flex-shrink-0 border-b ${isDarkTheme ? 'border-gray-700' : 'border-gray-200'}`}
+              className="w-full h-12 flex items-center justify-center cursor-grab active:cursor-grabbing touch-none bg-black/50 border-b border-white/10 rounded-t-2xl"
               onTouchStart={handleTouchStart}
               onTouchMove={handleTouchMove}
               onTouchEnd={handleTouchEnd}
             >
-              <div className={`w-12 h-1 ${isDarkTheme ? 'bg-gray-600' : 'bg-gray-300'} rounded-full`}></div>
+              <div className="w-12 h-1 bg-white/20 rounded-full"></div>
             </div>
             
-            {/* Panel content - only show when panel is not minimized */}
+            {/* Panel content */}
             {panelHeight > 40 && (
-              <div className={`flex-1 overflow-y-auto ${isDarkTheme ? 'text-white' : 'text-gray-900'}`}>
-                <StationPanel
-                  selectedStation={selectedStation}
-                  onClose={() => {
-                    setShowStationPanel(false);
-                    setPanelHeight(0);
-                  }}
-                  onStationClick={handleStationClick}
-                  stationSequences={stationSequences}
-                  isDarkTheme={isDarkTheme}
-                />
+              <div className="flex-1 overflow-y-auto text-white/80">
+                {selectedStation ? (
+                  <StationPanel
+                    selectedStation={selectedStation}
+                    onClose={() => {
+                      setShowStationPanel(false);
+                      setPanelHeight(0);
+                    }}
+                    onStationClick={handleStationClick}
+                    stationSequences={stationSequences}
+                    isDarkTheme={true}
+                  />
+                ) : selectedLine ? (
+                  <LinePanel
+                    selectedLine={selectedLine}
+                    onClose={() => {
+                      setShowStationPanel(false);
+                      setPanelHeight(0);
+                    }}
+                    stationSequences={stationSequences}
+                    isDarkTheme={true}
+                  />
+                ) : null}
               </div>
             )}
           </div>
         </div>
       )}
 
-      {/* Line Panel (Mobile) */}
-      {selectedLine && showStationPanel && (
-        <div 
-          ref={panelRef}
-          className="fixed inset-x-0 bottom-0 z-50 md:hidden"
-          style={{
-            height: `${panelHeight}px`,
-            transition: isDragging ? 'none' : 'height 0.3s ease-out',
-            backgroundColor: 'transparent'
-          }}
-        >
-          <div 
-            className={`${isDarkTheme ? 'bg-[#1a1a1a]' : 'bg-white'} rounded-t-2xl shadow-lg transform transition-transform duration-300 ease-in-out`}
-            style={{ 
-              height: '100%',
-              display: 'flex',
-              flexDirection: 'column'
-            }}
-          >
-            {/* Drag handle */}
-            <div 
-              className={`w-full h-12 flex items-center justify-center cursor-grab active:cursor-grabbing touch-none ${isDarkTheme ? 'bg-[#2a2a2a]' : 'bg-white'} rounded-t-2xl flex-shrink-0 border-b ${isDarkTheme ? 'border-gray-700' : 'border-gray-200'}`}
-              onTouchStart={handleTouchStart}
-              onTouchMove={handleTouchMove}
-              onTouchEnd={handleTouchEnd}
-            >
-              <div className={`w-12 h-1 ${isDarkTheme ? 'bg-gray-600' : 'bg-gray-300'} rounded-full`}></div>
-            </div>
-            
-            {/* Panel content - only show when panel is not minimized */}
-            {panelHeight > 40 && (
-              <div className={`flex-1 overflow-y-auto ${isDarkTheme ? 'text-white' : 'text-gray-900'}`}>
-                <LinePanel
-                  selectedLine={selectedLine}
-                  onClose={() => {
-                    setShowStationPanel(false);
-                    setPanelHeight(0);
-                    setSelectedLineState(null);
-                  }}
-                  stationSequences={stationSequences}
-                  isDarkTheme={isDarkTheme}
-                />
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
+      {/* Map Controls */}
       <div className={`map-controls ${selectedStation && !showStationPanel ? 'side-panel-open' : ''}`}>
         <button
           onClick={toggleDarkTheme}
-          className={`map-control-button theme-toggle ${isDarkTheme ? 'dark-theme' : ''}`}
-          title={isDarkTheme ? "Switch to Light Theme" : "Switch to Dark Theme"}
+          className="map-control-button"
+          title={isDarkTheme ? "Switch to Light Map" : "Switch to Dark Map"}
         >
           <span className="material-icons">{isDarkTheme ? 'light_mode' : 'dark_mode'}</span>
         </button>
         <button
           onClick={toggleSatelliteView}
-          className={`map-control-button satellite-toggle ${isDarkTheme ? 'dark-theme' : ''}`}
+          className="map-control-button"
           title={isSatellite ? "Switch to Map View" : "Switch to Satellite View"}
         >
           <span className="material-icons">{isSatellite ? 'map' : 'satellite'}</span>
         </button>
         <button
           onClick={toggleFullscreen}
-          className={`map-control-button fullscreen-toggle ${isDarkTheme ? 'dark-theme' : ''}`}
+          className="map-control-button"
           title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
         >
           <span className="material-icons">{isFullscreen ? 'fullscreen_exit' : 'fullscreen'}</span>
         </button>
         <button
           onClick={() => document.querySelector('.ol-rotate button').click()}
-          className={`map-control-button rotate-toggle ${isDarkTheme ? 'dark-theme' : ''}`}
+          className="map-control-button"
           title="Reset rotation"
         >
           <span className="material-icons">navigation</span>
@@ -806,6 +775,7 @@ const MapComponent = () => {
 
       <style>{`
         @import url('https://fonts.googleapis.com/icon?family=Material+Icons');
+        @import url('https://fonts.googleapis.com/css2?family=Cabin:wght@400;500;600;700&family=Noto+Sans+Tamil:wght@400;500;600;700&display=swap');
 
         .map-container {
           position: relative;
@@ -814,6 +784,9 @@ const MapComponent = () => {
           height: 100dvh;
           overflow: hidden;
           touch-action: none;
+          font-family: "Cabin", "Noto Sans Tamil", serif;
+          background-color: #000;
+          color: rgba(255, 255, 255, 0.9);
         }
 
         .map-container.fullscreen {
@@ -835,10 +808,7 @@ const MapComponent = () => {
         }
 
         /* Hide default OpenLayers controls */
-        .ol-full-screen {
-          display: none !important;
-        }
-        .ol-rotate {
+        .ol-full-screen, .ol-rotate {
           display: none !important;
         }
 
@@ -849,23 +819,22 @@ const MapComponent = () => {
           right: 1em;
           display: flex;
           flex-direction: column;
-          gap: 0.5em;
-          z-index: 1000; /* Lower than the side panel */
+          gap: 0.75em;
+          z-index: 1000;
         }
 
-        /* Adjust map controls position when side panel is open */
         .map-controls.side-panel-open {
-          right: calc(400px + 1em); /* 400px is the width of the side panel */
+          right: calc(400px + 1em);
         }
 
         .map-control-button {
-          background-color: rgba(255, 255, 255, 0.95);
-          border: none;
-          border-radius: 50%;
-          width: 36px;
-          height: 36px;
+          background-color: rgba(0, 0, 0, 0.8);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 8px;
+          width: 40px;
+          height: 40px;
           cursor: pointer;
-          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+          backdrop-filter: blur(8px);
           transition: all 0.2s ease;
           display: flex;
           align-items: center;
@@ -876,21 +845,17 @@ const MapComponent = () => {
 
         .map-control-button .material-icons {
           font-size: 20px;
-          color: #1565C0;
+          color: rgba(255, 255, 255, 0.8);
         }
 
         .map-control-button:hover {
-          transform: scale(1.1);
+          background-color: rgba(0, 0, 0, 0.9);
+          border-color: rgba(255, 255, 255, 0.2);
+          transform: translateY(-1px);
         }
 
-        /* Dark theme styles */
-        .dark-theme.map-control-button {
-          background-color: rgba(33, 33, 33, 0.95);
-          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
-        }
-
-        .dark-theme.map-control-button .material-icons {
-          color: #90CAF9;
+        .map-control-button:active {
+          transform: translateY(0);
         }
 
         /* Mobile-specific styles */
@@ -903,12 +868,12 @@ const MapComponent = () => {
           }
 
           .map-controls.side-panel-open {
-            right: 1em; /* Reset for mobile */
+            right: 1em;
           }
 
           .map-control-button {
-            width: 40px;
-            height: 40px;
+            width: 44px;
+            height: 44px;
           }
 
           .map-control-button .material-icons {
@@ -916,100 +881,23 @@ const MapComponent = () => {
           }
         }
 
-        /* Remove old popup styles */
-        .station-popup {
-          display: none;
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+          width: 8px;
+          height: 8px;
         }
 
-        /* Station panel styling */
-        :global(.station-panel) {
-          position: fixed;
-          z-index: 10000;
-          color: #111827; /* text-gray-900 for light theme */
-          background-color: white;
+        ::-webkit-scrollbar-track {
+          background: rgba(0, 0, 0, 0.1);
         }
 
-        .dark-theme.station-panel {
-          color: #f3f4f6; /* text-gray-100 for dark theme */
-          background-color: #1a1a1a;
+        ::-webkit-scrollbar-thumb {
+          background: rgba(255, 255, 255, 0.2);
+          border-radius: 4px;
         }
 
-        /* Mobile slide-up panel styles */
-        @media (max-width: 768px) {
-          .map-container {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            height: 100%;
-            height: 100dvh;
-            width: 100%;
-            overflow: hidden;
-            touch-action: none;
-            margin: 0;
-            padding: 0;
-            background: transparent;
-          }
-
-          .map {
-            touch-action: none;
-            height: 100%;
-            width: 100%;
-          }
-
-          /* Remove any background overlay */
-          .station-panel::before,
-          .station-panel::after {
-            display: none;
-          }
-
-          /* Ensure text colors in mobile panel */
-          .station-panel h2,
-          .station-panel h3,
-          .station-panel p,
-          .station-panel span {
-            color: inherit !important;
-          }
-
-          /* Remove the bluish gray background */
-          .bg-gray-50 {
-            background-color: transparent !important;
-          }
-
-          .dark-theme .bg-gray-50 {
-            background-color: transparent !important;
-          }
-        }
-
-        /* Dark theme styles for search and popups */
-        :global(.dark-theme .search-bar-container) {
-          background-color: rgba(33, 33, 33, 0.95);
-        }
-
-        :global(.dark-theme .search-bar-container input) {
-          background-color: rgba(48, 48, 48, 0.95);
-          color: #fff;
-          border-color: #424242;
-        }
-
-        :global(.dark-theme .search-bar-container input:focus) {
-          border-color: #90CAF9;
-          box-shadow: 0 2px 8px rgba(144, 202, 249, 0.2);
-        }
-
-        :global(.dark-theme .search-results) {
-          background-color: rgba(33, 33, 33, 0.95);
-          border-color: #424242;
-          color: #fff;
-        }
-
-        :global(.dark-theme .search-result-item) {
-          border-bottom-color: #424242;
-        }
-
-        :global(.dark-theme .search-result-item:hover) {
-          background-color: rgba(48, 48, 48, 0.95);
+        ::-webkit-scrollbar-thumb:hover {
+          background: rgba(255, 255, 255, 0.3);
         }
       `}</style>
     </div>

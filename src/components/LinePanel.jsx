@@ -5,82 +5,156 @@ const LinePanel = ({ selectedLine, onClose, stationSequences, isDarkTheme }) => 
   if (!selectedLine) return null;
 
   const lineColors = {
-    "Blue Line": "bg-[#3280c3]",
-    "Green Line": "bg-[#52b747]",
-    "Red Line": "bg-[#e50000]",
-    "Orange Line": "bg-[#f76300]",
-    "Purple Line": "bg-[#790079]",
-    MRTS: "bg-[#008080]",
-    "South Line": "bg-[#a9a9a9]",
-    "West Line": "bg-[#0ddd22]",
-    "North Line": "bg-[#a0522d]",
+    "Blue Line": "#3280c3",
+    "Green Line": "#52b747",
+    "Red Line": "#e50000",
+    "Orange Line": "#f76300",
+    "Purple Line": "#790079",
+    MRTS: "#008080",
+    "South Line": "#a9a9a9",
+    "West Line": "#0ddd22",
+    "North Line": "#a0522d",
   };
 
-  const getLineColor = (line) => lineColors[line] || "bg-gray-500";
+  const getLineColor = (line) => lineColors[line] || "#9E9E9E";
 
   const sequence = stationSequences?.[selectedLine] || [];
 
-  return (
-    <div className={`line-panel ${isDarkTheme ? 'dark-theme' : ''}`}>
-      <div className="p-4">
-        <div className="flex justify-between items-start mb-4">
-          <div className="flex items-start gap-4">
-            <div className={`w-12 h-12 rounded-full flex items-center justify-center ${getLineColor(selectedLine)}`}>
-              <span className="text-white text-xl font-bold">
-                {selectedLine.charAt(0)}
-              </span>
-            </div>
-            <div>
-              <h2 className={`text-xl font-semibold ${isDarkTheme ? 'text-white' : 'text-gray-900'}`}>
-                {selectedLine}
-              </h2>
-              <p className={`text-sm ${isDarkTheme ? 'text-gray-400' : 'text-gray-600'}`}>
-                {sequence.length} Stations
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className={`p-2 rounded-full ${isDarkTheme ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
-          >
-            <X className={`w-5 h-5 ${isDarkTheme ? 'text-gray-300' : 'text-gray-600'}`} />
-          </button>
-        </div>
+  const getStationCount = () => sequence.length;
 
-        <div className={`space-y-4 ${isDarkTheme ? 'text-gray-300' : 'text-gray-700'}`}>
-          <div className={`p-3 rounded-lg ${isDarkTheme ? 'bg-[#2a2a2a]' : 'bg-white'} border ${isDarkTheme ? 'border-gray-700' : 'border-gray-200'}`}>
-            <h3 className={`text-sm font-medium mb-2 ${isDarkTheme ? 'text-white' : 'text-gray-900'}`}>
-              Station Sequence
-            </h3>
-            <div className="relative">
-              {/* Vertical line - bottom layer */}
-              <div className={`absolute left-[11px] top-0 bottom-0 w-0.5 ${isDarkTheme ? 'bg-gray-600' : 'bg-gray-300'} z-0`} />
-              {/* Station sequence - top layer */}
-              <div className="relative z-10">
-                {sequence.map((station, index) => (
+  const getStations = () => sequence;
+
+  return (
+    <div className="line-panel dark-theme">
+      <div className="line-header">
+        <h2 className="line-name">{selectedLine}</h2>
+        <div className="line-dot" style={{ backgroundColor: getLineColor(selectedLine) }}></div>
+      </div>
+
+      <div className="line-details">
+        <div className="detail-item">
+          <span className="material-icons">route</span>
+          <span className="detail-label">Type:</span>
+          <span className="detail-value">Metro Line</span>
+        </div>
+        <div className="detail-item">
+          <span className="material-icons">train</span>
+          <span className="detail-label">Stations:</span>
+          <span className="detail-value">{getStationCount()} stations</span>
+        </div>
+      </div>
+
+      <div className="line-stations">
+        <h3 className="section-title">Station Sequence</h3>
+        <div className="station-sequence">
+          <div className="relative">
+            {/* Vertical line - bottom layer */}
+            <div className="absolute left-[11px] top-0 bottom-0 w-0.5 bg-gray-600 z-0" />
+            {/* Station sequence - top layer */}
+            <div className="relative z-10">
+              {sequence.map((station, index) => (
+                <div
+                  key={station}
+                  className="flex items-center mb-4 last:mb-0 text-gray-300"
+                >
                   <div
-                    key={station}
-                    className={`flex items-center mb-4 last:mb-0 ${
-                      isDarkTheme ? 'text-gray-300' : 'text-gray-600'
-                    }`}
+                    className="w-6 h-6 rounded-full flex items-center justify-center mr-3 bg-gray-600"
                   >
-                    <div
-                      className={`w-6 h-6 rounded-full flex items-center justify-center mr-3 ${
-                        isDarkTheme ? 'bg-gray-600' : 'bg-gray-300'
-                      }`}
-                    >
-                      <span className={`text-xs ${isDarkTheme ? 'text-gray-900' : 'text-white'}`}>
-                        {index + 1}
-                      </span>
-                    </div>
-                    <span className="text-sm">{station}</span>
+                    <span className="text-xs text-gray-900">
+                      {index + 1}
+                    </span>
                   </div>
-                ))}
-              </div>
+                  <span className="text-sm">{station}</span>
+                </div>
+              ))}
             </div>
           </div>
         </div>
       </div>
+
+      <style jsx>{`
+        .line-panel {
+          padding: 1.5rem;
+          font-family: "Cabin", "Noto Sans Tamil", serif;
+          color: rgba(255, 255, 255, 0.9);
+        }
+
+        .line-header {
+          display: flex;
+          align-items: center;
+          gap: 1rem;
+          margin-bottom: 1.5rem;
+        }
+
+        .line-name {
+          font-size: 1.5rem;
+          font-weight: 600;
+          margin: 0;
+          color: inherit;
+        }
+
+        .line-dot {
+          width: 1rem;
+          height: 1rem;
+          border-radius: 50%;
+        }
+
+        .line-details {
+          margin-bottom: 1.5rem;
+        }
+
+        .detail-item {
+          display: flex;
+          align-items: center;
+          margin-bottom: 0.75rem;
+          color: inherit;
+        }
+
+        .detail-item .material-icons {
+          font-size: 1.25rem;
+          margin-right: 0.75rem;
+          opacity: 0.7;
+        }
+
+        .detail-label {
+          font-weight: 500;
+          margin-right: 0.5rem;
+          opacity: 0.8;
+        }
+
+        .detail-value {
+          opacity: 0.9;
+        }
+
+        .section-title {
+          font-size: 1.125rem;
+          font-weight: 600;
+          margin: 0 0 1rem;
+          color: inherit;
+        }
+
+        .station-sequence {
+          background-color: rgba(42, 42, 42, 0.5);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 0.5rem;
+          padding: 1rem;
+        }
+
+        @media (max-width: 768px) {
+          .line-panel {
+            padding: 1rem;
+          }
+
+          .line-name {
+            font-size: 1.25rem;
+          }
+
+          .line-dot {
+            width: 0.875rem;
+            height: 0.875rem;
+          }
+        }
+      `}</style>
     </div>
   );
 };

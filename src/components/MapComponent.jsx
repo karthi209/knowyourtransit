@@ -8,7 +8,7 @@ import { createVectorLayerStations, createVectorLayerLines, vectorLayerStationLa
 import { useMapContext } from "../context/MapContext"; // Assuming you have a context provider for map state
 import StationPanel from "./StationPanel";
 import StationPopup from "./StationPopup"; // Assuming this is your station popup component
-import stationSequences from './stationSequences';
+import { stationSequences as initialStationSequences, getStationSequencesWithNetwork } from './stationSequences'; // Import both
 import SearchBar from './SearchBar';
 import { ZoomSlider, ZoomToExtent, FullScreen, MousePosition, Rotate } from "ol/control";
 import { Vector as VectorSource } from "ol/source";
@@ -45,6 +45,7 @@ const MapComponent = () => {
   const [nearestStations, setNearestStations] = useState([]); // State for nearest stations (will become categorized)
   const [showNearestStationsPanel, setShowNearestStationsPanel] = useState(false); // State for panel visibility (Desktop)
   const [showMobileNearestStationsPanel, setShowMobileNearestStationsPanel] = useState(false); // State for panel visibility (Mobile)
+  const [enrichedStationSequences, setEnrichedStationSequences] = useState([]); // State for enriched sequences
 
   const mapContainerRef = useRef(null);
   const mapInstanceRef = useRef(null);
@@ -353,6 +354,15 @@ const MapComponent = () => {
       radiusLayerRef.current = null;
     };
   }, []);
+
+  // Load and enrich station sequences when the component mounts
+  useEffect(() => {
+    const loadSequences = async () => {
+      const sequences = await getStationSequencesWithNetwork();
+      setEnrichedStationSequences(sequences);
+    };
+    loadSequences();
+  }, []); // Empty dependency array means this runs once on mount
 
   useEffect(() => {
     if (!mapInstanceRef.current || !linesLayerRef.current) return;
@@ -1252,7 +1262,7 @@ const MapComponent = () => {
                   }
                 }}
                 onStationClick={handleStationClick}
-                stationSequences={stationSequences}
+                stationSequences={enrichedStationSequences}
                 isDarkTheme={true}
                 onBackToLine={handleBackToLine}
                 showBackButton={cameFromLine}
@@ -1292,7 +1302,7 @@ const MapComponent = () => {
               <LinePanel
                 selectedLine={selectedLine}
                 onClose={() => setSelectedLineState(null)}
-                stationSequences={stationSequences}
+                stationSequences={enrichedStationSequences}
                 isDarkTheme={true}
                 onStationClick={handleLinePanelStationClick}
                 cameFromStation={cameFromStation}
@@ -1357,7 +1367,7 @@ const MapComponent = () => {
                         setPanelHeight(0);
                       }}
           onStationClick={handleStationClick}
-          stationSequences={stationSequences}
+          stationSequences={enrichedStationSequences}
                       isDarkTheme={true}
                       onBackToLine={handleBackToLine}
                       showBackButton={cameFromLine}
@@ -1370,7 +1380,7 @@ const MapComponent = () => {
                         setShowStationPanel(false);
                         setPanelHeight(0);
                       }}
-                      stationSequences={stationSequences}
+                      stationSequences={enrichedStationSequences}
                       isDarkTheme={true}
                       onStationClick={handleLinePanelStationClick}
                       cameFromStation={cameFromStation}

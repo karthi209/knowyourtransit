@@ -291,6 +291,7 @@ async function getStationSequencesWithNetwork() {
       return acc;
     }, {});
 
+    // Enrich the initial stationSequences object with network info
     const enrichedSequences = Object.entries(stationSequences).map(([line, stations]) => ({
       line,
       stations: stations.map(stationName => ({
@@ -306,6 +307,4 @@ async function getStationSequencesWithNetwork() {
   }
 }
 
-const enrichedStationSequences = await getStationSequencesWithNetwork();
-
-export default enrichedStationSequences;
+export { stationSequences, getStationSequencesWithNetwork };

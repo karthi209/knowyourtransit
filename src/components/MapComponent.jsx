@@ -18,6 +18,7 @@ import { Point } from "ol/geom";
 import LinePanel from "./LinePanel";
 import WelcomeAnimation from './WelcomeAnimation';
 import { getFeatureStyle } from "../styles/LineStyles";
+import OSM from "ol/source/OSM";
 
 const MapComponent = () => {
   const { setSelectedStation, setSelectedLine } = useMapContext();
@@ -35,6 +36,7 @@ const MapComponent = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [showWelcome, setShowWelcome] = useState(true);
+  const [mapStyle, setMapStyle] = useState('dark'); // 'dark', 'light', 'satellite', 'osm'
 
   const mapContainerRef = useRef(null);
   const mapInstanceRef = useRef(null);
@@ -47,6 +49,7 @@ const MapComponent = () => {
   const panelRef = useRef(null);
   const selectedStationLayerRef = useRef(null);
   const pulseLayerRef = useRef(null);
+  const osmBaseLayerRef = useRef(null);
 
   useEffect(() => {
     if (mapInstanceRef.current) return; // Ensure map is only initialized once
@@ -74,6 +77,12 @@ const MapComponent = () => {
       visible: false,
     });
     satelliteBaseLayerRef.current = satelliteBaseLayer;
+
+    const osmBaseLayer = new TileLayer({
+      source: new OSM(),
+      visible: false,
+    });
+    osmBaseLayerRef.current = osmBaseLayer;
 
     // Create a vector layer for selected station highlighting
     const selectedStationLayer = new VectorLayer({
@@ -127,6 +136,7 @@ const MapComponent = () => {
         lightBaseLayer,
         darkBaseLayer,
         satelliteBaseLayer,
+        osmBaseLayer,
         createVectorLayerLines(selectedLine),
         vectorLayerStationLayouts,
         vectorLayerStationWalks,
@@ -223,6 +233,7 @@ const MapComponent = () => {
       lightBaseLayerRef.current = null;
       darkBaseLayerRef.current = null;
       satelliteBaseLayerRef.current = null;
+      osmBaseLayerRef.current = null;
       selectedStationLayerRef.current = null;
       pulseLayerRef.current = null;
     };
@@ -551,22 +562,56 @@ const MapComponent = () => {
     setShowSearchResults(false);
   };
 
-  const toggleSatelliteView = () => {
+  const cycleMapStyle = () => {
     if (!lightBaseLayerRef.current || !darkBaseLayerRef.current || !satelliteBaseLayerRef.current) return;
-    const newIsSatellite = !isSatellite;
-    lightBaseLayerRef.current.setVisible(!newIsSatellite && !isDarkTheme);
-    darkBaseLayerRef.current.setVisible(!newIsSatellite && isDarkTheme);
-    satelliteBaseLayerRef.current.setVisible(newIsSatellite);
-    setIsSatellite(newIsSatellite);
-  };
-
-  const toggleDarkTheme = () => {
-    if (!lightBaseLayerRef.current || !darkBaseLayerRef.current || !satelliteBaseLayerRef.current) return;
-    const newIsDarkTheme = !isDarkTheme;
-    lightBaseLayerRef.current.setVisible(!newIsDarkTheme && !isSatellite);
-    darkBaseLayerRef.current.setVisible(newIsDarkTheme && !isSatellite);
-    satelliteBaseLayerRef.current.setVisible(isSatellite);
-    setIsDarkTheme(newIsDarkTheme);
+    
+    const styles = ['dark', 'light', 'satellite', 'osm'];
+    const currentIndex = styles.indexOf(mapStyle);
+    const nextIndex = (currentIndex + 1) % styles.length;
+    const newStyle = styles[nextIndex];
+    
+    // Hide all base layers
+    lightBaseLayerRef.current.setVisible(false);
+    darkBaseLayerRef.current.setVisible(false);
+    satelliteBaseLayerRef.current.setVisible(false);
+    if (osmBaseLayerRef.current) {
+      osmBaseLayerRef.current.setVisible(false);
+    }
+    
+    // Show the selected base layer
+    switch (newStyle) {
+      case 'dark':
+        darkBaseLayerRef.current.setVisible(true);
+        setIsDarkTheme(true);
+        setIsSatellite(false);
+        break;
+      case 'light':
+        lightBaseLayerRef.current.setVisible(true);
+        setIsDarkTheme(false);
+        setIsSatellite(false);
+        break;
+      case 'satellite':
+        satelliteBaseLayerRef.current.setVisible(true);
+        setIsDarkTheme(false);
+        setIsSatellite(true);
+        break;
+      case 'osm':
+        if (!osmBaseLayerRef.current) {
+          const osmLayer = new TileLayer({
+            source: new OSM(),
+            visible: true
+          });
+          mapInstanceRef.current.addLayer(osmLayer);
+          osmBaseLayerRef.current = osmLayer;
+        } else {
+          osmBaseLayerRef.current.setVisible(true);
+        }
+        setIsDarkTheme(false);
+        setIsSatellite(false);
+        break;
+    }
+    
+    setMapStyle(newStyle);
   };
 
   const toggleFullscreen = () => {
@@ -781,18 +826,16 @@ const MapComponent = () => {
       {/* Map Controls */}
       <div className={`map-controls ${selectedStation && !showStationPanel ? 'side-panel-open' : ''}`}>
         <button
-          onClick={toggleDarkTheme}
+          onClick={cycleMapStyle}
           className="map-control-button"
-          title={isDarkTheme ? "Switch to Light Map" : "Switch to Dark Map"}
+          title={`Current: ${mapStyle.charAt(0).toUpperCase() + mapStyle.slice(1)} Map`}
         >
-          <span className="material-icons">{isDarkTheme ? 'light_mode' : 'dark_mode'}</span>
-        </button>
-        <button
-          onClick={toggleSatelliteView}
-          className="map-control-button"
-          title={isSatellite ? "Switch to Map View" : "Switch to Satellite View"}
-        >
-          <span className="material-icons">{isSatellite ? 'map' : 'satellite'}</span>
+          <span className="material-icons">
+            {mapStyle === 'dark' ? 'dark_mode' :
+             mapStyle === 'light' ? 'light_mode' :
+             mapStyle === 'satellite' ? 'satellite' :
+             'map'}
+          </span>
         </button>
         <button
           onClick={toggleFullscreen}

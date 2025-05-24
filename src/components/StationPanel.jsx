@@ -215,7 +215,11 @@ const StationPanel = ({ selectedStation, onClose, onStationClick, stationSequenc
 
       <div className="station-features">
         <div className="feature-item">
-          <span className="material-icons">{selectedStation.parking === 'yes' ? 'local_parking' : 'no_parking'}</span>
+          <img
+            src={getFeatureIcon('parking', selectedStation.parking)}
+            alt="Parking icon"
+            className="h-6 w-6 mb-2 opacity-80"
+          />
           <span className="feature-label">Parking</span>
         </div>
         <div className="feature-item">

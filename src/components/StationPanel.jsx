@@ -147,10 +147,19 @@ const StationPanel = ({ selectedStation, onClose, onStationClick, stationSequenc
   return (
     <div className={`station-panel ${isDarkTheme ? 'dark-theme' : 'light-theme'}`}>
       <div className="station-header">
-        <h2 className="station-name">{selectedStation.name}</h2>
-        {selectedStation.name_ta && (
-          <h3 className="station-name-tamil">{selectedStation.name_ta}</h3>
-        )}
+        <div className="flex items-start gap-3">
+          <img 
+            src={getLogo(selectedStation.network)} 
+            alt="Station Type" 
+            className="h-10 w-auto opacity-80 mt-1"
+          />
+          <div>
+            <h2 className="station-name">{selectedStation.name}</h2>
+            {selectedStation.name_ta && (
+              <h3 className="station-name-tamil">{selectedStation.name_ta}</h3>
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="station-details">
@@ -278,7 +287,7 @@ const StationPanel = ({ selectedStation, onClose, onStationClick, stationSequenc
         .station-name-tamil {
           font-size: 1.25rem;
           font-weight: 500;
-          margin: 0.5rem 0 0;
+          margin: 0.25rem 0 0;
           color: inherit;
           opacity: 0.8;
         }

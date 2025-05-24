@@ -637,9 +637,11 @@ const MapComponent = () => {
           }}
         >
           <div className="h-full flex flex-col bg-black/95 backdrop-blur-sm border-l border-white/10">
-            {/* Header with close button */}
+            {/* Header with logo and close button */}
             <div className="w-full h-12 flex items-center justify-between px-4 bg-black/50 border-b border-white/10">
-              <div className="text-lg font-medium text-white">Station Details</div>
+              <div className="flex items-center gap-2">
+                <div className="text-lg font-medium text-white">Station Details</div>
+              </div>
               <button 
                 onClick={() => {
                   setSelectedStationState(null);
@@ -683,9 +685,11 @@ const MapComponent = () => {
           }}
         >
           <div className="h-full flex flex-col bg-black/95 backdrop-blur-sm border-l border-white/10">
-            {/* Header with close button */}
+            {/* Header with logo and close button */}
             <div className="w-full h-12 flex items-center justify-between px-4 bg-black/50 border-b border-white/10">
-              <div className="text-lg font-medium text-white">Line Details</div>
+              <div className="flex items-center gap-2">
+                <div className="text-lg font-medium text-white">Line Details</div>
+              </div>
               <button 
                 onClick={() => setSelectedLineState(null)}
                 className="p-2 rounded-full hover:bg-white/10 transition-colors"
@@ -699,10 +703,7 @@ const MapComponent = () => {
               <LinePanel
                 selectedLine={selectedLine}
                 onClose={() => setSelectedLineState(null)}
-                stationSequences={Object.entries(stationSequences).map(([line, stations]) => ({
-                  line,
-                  stations: stations.map(name => ({ name }))
-                }))}
+                stationSequences={stationSequences}
                 isDarkTheme={true}
                 onStationClick={handleLinePanelStationClick}
               />
@@ -730,13 +731,18 @@ const MapComponent = () => {
               flexDirection: 'column'
             }}
           >
-            {/* Drag handle */}
+            {/* Drag handle with logo */}
             <div 
-              className="w-full h-12 flex items-center justify-center cursor-grab active:cursor-grabbing touch-none bg-black/50 border-b border-white/10 rounded-t-2xl"
+              className="w-full h-12 flex items-center justify-between px-4 cursor-grab active:cursor-grabbing touch-none bg-black/50 border-b border-white/10 rounded-t-2xl"
               onTouchStart={handleTouchStart}
               onTouchMove={handleTouchMove}
               onTouchEnd={handleTouchEnd}
             >
+              <div className="flex items-center gap-2">
+                <div className="text-lg font-medium text-white">
+                  {selectedStation ? 'Station Details' : 'Line Details'}
+                </div>
+              </div>
               <div className="w-12 h-1 bg-white/20 rounded-full"></div>
             </div>
             
@@ -761,10 +767,7 @@ const MapComponent = () => {
                       setShowStationPanel(false);
                       setPanelHeight(0);
                     }}
-                    stationSequences={Object.entries(stationSequences).map(([line, stations]) => ({
-                      line,
-                      stations: stations.map(name => ({ name }))
-                    }))}
+                    stationSequences={stationSequences}
                     isDarkTheme={true}
                     onStationClick={handleLinePanelStationClick}
                   />

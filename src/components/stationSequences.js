@@ -272,9 +272,40 @@ const stationSequences = {
     "Tiruvanmiyur",
     "Taramani",
     "Perungudi",
-    "Velachery"
+    "Velachery",
+    "Puzhudivakkam",
+    "Adambakkam",
+    "St. Thomas Mount"
   ]
-
 };
 
-export default stationSequences;
+// Fetch station data and enrich the sequences
+async function getStationSequencesWithNetwork() {
+  try {
+    const response = await fetch('/data/stations.geojson');
+    const data = await response.json();
+    const stationData = data.features.reduce((acc, feature) => {
+      if (feature.properties && feature.properties.name && feature.properties.network) {
+        acc[feature.properties.name] = feature.properties.network;
+      }
+      return acc;
+    }, {});
+
+    const enrichedSequences = Object.entries(stationSequences).map(([line, stations]) => ({
+      line,
+      stations: stations.map(stationName => ({
+        name: stationName,
+        network: stationData[stationName] || 'Unknown' // Get network or default to Unknown
+      }))
+    }));
+
+    return enrichedSequences;
+  } catch (error) {
+    console.error('Error loading station data for sequences:', error);
+    return [];
+  }
+}
+
+const enrichedStationSequences = await getStationSequencesWithNetwork();
+
+export default enrichedStationSequences;

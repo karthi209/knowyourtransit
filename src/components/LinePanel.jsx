@@ -18,22 +18,30 @@ const LinePanel = ({ selectedLine, onClose, stationSequences, isDarkTheme, onSta
 
   const getLineColor = (line) => lineColors[line] || "#9E9E9E";
 
-  // Ensure stationSequences is an array before using find
+  const getLogo = (network) => {
+    switch (network) {
+      case "Metro":
+        return "/metro.svg";
+      case "MRTS":
+      case "Suburban":
+        return "/railway.svg";
+      default:
+        return "/metro.svg"; // Default to metro logo
+    }
+  };
+
+  // stationSequences is now expected to be an array of line objects
   const sequence = Array.isArray(stationSequences) 
     ? stationSequences.find(seq => seq.line === selectedLine)
     : null;
 
-  if (!sequence) {
+  if (!sequence || !Array.isArray(sequence.stations) || sequence.stations.length === 0) {
     return (
       <div className="p-4 text-white/80">
         <p>No sequence information available for this line.</p>
       </div>
     );
   }
-
-  const getStationCount = () => sequence.stations.length;
-
-  const getStations = () => sequence.stations;
 
   return (
     <div className="flex flex-col h-full">
@@ -51,26 +59,37 @@ const LinePanel = ({ selectedLine, onClose, stationSequences, isDarkTheme, onSta
             
             {/* Stations */}
             {sequence.stations.map((station, index) => (
-              <div key={station.name} className="relative mb-6 last:mb-0">
-                {/* Station circle */}
-                <div className="absolute left-3 w-3 h-3 rounded-full bg-white/80 border-2 border-white/40 transform -translate-x-1/2"></div>
-                
-                {/* Station number */}
-                <div className="absolute left-3 w-6 h-6 rounded-full bg-white/20 border border-white/40 transform -translate-x-1/2 -translate-y-1/2 flex items-center justify-center text-xs font-medium text-white">
-                  {index + 1}
+              // Ensure station object and name property exist
+              station && station.name ? (
+                <div key={station.name} className="relative mb-6 last:mb-0">
+                  {/* Station circle */}
+                  <div className="absolute left-3 w-3 h-3 rounded-full bg-white/80 border-2 border-white/40 transform -translate-x-1/2"></div>
+                  
+                  {/* Station number */}
+                  <div className="absolute left-3 w-6 h-6 rounded-full bg-white/20 border border-white/40 transform -translate-x-1/2 -translate-y-1/2 flex items-center justify-center text-xs font-medium text-white">
+                    {index + 1}
+                  </div>
+                  
+                  {/* Station name with logo */}
+                  <div 
+                    className="ml-8 cursor-pointer hover:bg-white/5 rounded-lg p-2 transition-colors"
+                    onClick={() => onStationClick(station)}
+                  >
+                    <div className="flex items-center gap-2">
+                      {/* Use station.network to get the correct logo */}
+                      <img 
+                        src={getLogo(station.network)} 
+                        alt="Station Type" 
+                        className="h-5 w-auto opacity-80"
+                      />
+                      <div className="text-white font-medium">{station.name}</div>
+                    </div>
+                    {station.name_ta && (
+                      <div className="text-white/60 text-sm font-noto-tamil ml-7">{station.name_ta}</div>
+                    )}
+                  </div>
                 </div>
-                
-                {/* Station name */}
-                <div 
-                  className="ml-8 cursor-pointer hover:bg-white/5 rounded-lg p-2 transition-colors"
-                  onClick={() => onStationClick(station)}
-                >
-                  <div className="text-white font-medium">{station.name}</div>
-                  {station.name_ta && (
-                    <div className="text-white/60 text-sm font-noto-tamil">{station.name_ta}</div>
-                  )}
-                </div>
-              </div>
+              ) : null
             ))}
           </div>
         </div>

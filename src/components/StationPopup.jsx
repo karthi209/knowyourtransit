@@ -1,3 +1,4 @@
+import React from "react";
 import { ChevronRightIcon } from '@heroicons/react/solid'; // Import icon from Heroicons
 
 const StationPopup = ({ selectedStation, onMoreDetailsClick }) => {
@@ -26,12 +27,15 @@ const StationPopup = ({ selectedStation, onMoreDetailsClick }) => {
 
   // Conditionally choose the logo based on network
   const getLogo = (network) => {
-    if (network === "Metro") {
-      return "/metro.svg"; // Metro logo
-    } else if (network === "MRTS" || network === "Suburban") {
-      return "/railway.svg"; // Railways logo
+    switch (network) {
+      case "Metro":
+        return "/metro.svg";
+      case "MRTS":
+      case "Suburban":
+        return "/railway.svg";
+      default:
+        return "/metro.svg"; // Default to metro logo
     }
-    return "/metro.svg"; // Default logo if no condition matches
   };
 
   // Get icons for parking, accessibility, and escalator based on availability
@@ -170,3 +174,4 @@ const StationPopup = ({ selectedStation, onMoreDetailsClick }) => {
 };
 
 export default StationPopup;
+

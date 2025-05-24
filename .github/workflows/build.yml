@@ -116,7 +116,7 @@ jobs:
           TIMEOUT=120  # 2 minutes in seconds
           START_TIME=$(date +%s)
           
-          until sshpass -p "${{ secrets.SSH_PASSWORD }}" ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_IP }} "docker ps --filter 'name=frontend-onesandzeros' --filter 'status=running' --format '{{.Names}}' | grep -w 'frontend-onesandzeros'"; do
+          until sshpass -p "${{ secrets.SSH_PASSWORD }}" ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_IP }} "docker ps --filter 'name=frontend-knowyourtransit' --filter 'status=running' --format '{{.Names}}' | grep -w 'frontend-knowyourtransit'"; do
             echo "Container not found or not running yet. Retrying in 5 seconds..."
             sleep 5
             
@@ -128,5 +128,5 @@ jobs:
               exit 1  # Exit with an error code
             fi
           done
-          echo "frontend-onesandzeros container is running!"
+          echo "frontend-knowyourtransitcontainer is running!"
 

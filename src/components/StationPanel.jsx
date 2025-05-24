@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { X, ChevronDown, ChevronUp } from "lucide-react";
 
-const StationPanel = ({ selectedStation, onClose, onStationClick, stationSequences, isDarkTheme }) => {
+const StationPanel = ({ selectedStation, onClose, onStationClick, stationSequences, isDarkTheme, onBackToLine, showBackButton }) => {
   if (!selectedStation) return null;
 
   const [expandedLine, setExpandedLine] = useState(null);
@@ -148,6 +148,15 @@ const StationPanel = ({ selectedStation, onClose, onStationClick, stationSequenc
     <div className={`station-panel ${isDarkTheme ? 'dark-theme' : 'light-theme'}`}>
       <div className="station-header">
         <div className="flex items-start gap-3">
+          {showBackButton && (
+            <button
+              onClick={onBackToLine}
+              className="p-2 rounded-full hover:bg-white/10 transition-colors"
+              title="Back to Line"
+            >
+              <span className="material-icons text-white/60">arrow_back</span>
+            </button>
+          )}
           <img 
             src={getLogo(selectedStation.network)} 
             alt="Station Type" 

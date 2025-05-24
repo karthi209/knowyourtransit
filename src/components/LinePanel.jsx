@@ -61,7 +61,7 @@ const LinePanel = ({ selectedLine, onClose, stationSequences, isDarkTheme, onSta
             {sequence.stations.map((station, index) => (
               // Ensure station object and name property exist
               station && station.name ? (
-                <div key={station.name} className="relative mb-6 last:mb-0">
+                <div key={station.id || station.name} className="relative mb-6 last:mb-0">
                   {/* Station circle */}
                   <div className="absolute left-3 w-3 h-3 rounded-full bg-white/80 border-2 border-white/40 transform -translate-x-1/2"></div>
                   

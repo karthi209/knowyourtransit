@@ -128,7 +128,7 @@ const stationSequences = {
   ],
   "Red Line": [
     "Madhavaram Milk Colony",
-    "Madhavaram Milk Colony",
+    "Madhavaram Depot",
     "Assisi Nagar",
     "Manjambakkam",
     "Velmurugan Nagar",

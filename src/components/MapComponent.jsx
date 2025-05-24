@@ -37,6 +37,7 @@ const MapComponent = () => {
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [showWelcome, setShowWelcome] = useState(true);
   const [mapStyle, setMapStyle] = useState('dark'); // 'dark', 'light', 'satellite', 'osm'
+  const [cameFromLine, setCameFromLine] = useState(false);
 
   const mapContainerRef = useRef(null);
   const mapInstanceRef = useRef(null);
@@ -290,14 +291,24 @@ const MapComponent = () => {
     }
   };
 
-  const handleStationClick = (feature) => {
+  const handleStationClick = (feature, fromLinePanel = false) => {
     const properties = feature.getProperties();
     console.log("Clicked Station Properties:", properties);
+    console.log("handleStationClick called with fromLinePanel:", fromLinePanel);
 
     if (!properties || !properties.name) return;
 
-    // Clear any existing line selection
-    setSelectedLineState(null);
+    // Set cameFromLine state based on fromLinePanel parameter
+    setCameFromLine(fromLinePanel);
+    console.log("handleStationClick: Setting cameFromLine to:", fromLinePanel);
+
+    // Clear any existing line selection ONLY if not coming from a line panel
+    if (!fromLinePanel) {
+      console.log("handleStationClick: Clearing selectedLineState");
+      setSelectedLineState(null);
+    }
+
+    console.log("handleStationClick: After check - selectedLine:", selectedLine);
 
     const station = {
       name: properties.name,
@@ -638,12 +649,98 @@ const MapComponent = () => {
     };
   }, []);
 
+  const handleBackToLine = () => {
+    console.log("handleBackToLine called");
+    console.log("Initial state:", { selectedStation, selectedLine, cameFromLine, showStationPanel });
+
+    setCameFromLine(false);
+    setSelectedStationState(null);
+    if (overlayRef.current) {
+      overlayRef.current.setPosition(undefined);
+    }
+
+    // Restore the line panel
+    const map = mapInstanceRef.current;
+    if (map) {
+      const linesLayer = linesLayerRef.current;
+      if (linesLayer) {
+        const source = linesLayer.getSource();
+        const features = source.getFeatures();
+        const lineFeature = features.find(f => f.get('Name') === selectedLine);
+
+        if (lineFeature) {
+          console.log("Line feature found:", lineFeature.getProperties());
+          // Get the line geometry
+          const geometry = lineFeature.getGeometry();
+
+          // Get the extent of the line
+          const extent = geometry.getExtent();
+
+          // Add padding to the extent
+          const padding = 0.2; // 20% padding
+          const width = extent[2] - extent[0];
+          const height = extent[3] - extent[1];
+          const paddedExtent = [
+            extent[0] - width * padding,
+            extent[1] - height * padding,
+            extent[2] + width * padding,
+            extent[3] + height * padding
+          ];
+
+          console.log("Padded extent:", paddedExtent);
+
+          // Animate to the line extent
+          map.getView().fit(paddedExtent, {
+            duration: 1000,
+            padding: [100, 100, 100, 100],
+            maxZoom: 14,
+            minZoom: 10,
+            easing: (t) => {
+              return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+            }
+          });
+        } else {
+          console.log("Line feature not found for selected line:", selectedLine);
+        }
+      } else {
+        console.log("Lines layer not found");
+      }
+    } else {
+      console.log("Map instance not found");
+    }
+
+    // On mobile, show the slide-up panel which will render the LinePanel
+    // On desktop, we need to ensure the LinePanel is shown
+    const isMobile = window.innerWidth <= 768;
+    if (isMobile) {
+      setShowStationPanel(true);
+      setPanelHeight(window.innerHeight * 0.6);
+      console.log("Mobile view: setShowStationPanel(true)");
+    } else {
+      console.log("Desktop view: Not setting showStationPanel");
+      // On desktop, we don't use showStationPanel for panel type
+      // We rely on selectedStation and selectedLine
+      // No need to set showStationPanel true on desktop
+    }
+
+    // Ensure the line is still selected to render LinePanel
+    if (selectedLine) {
+      console.log("selectedLine is still set:", selectedLine);
+        // No need to clear and set selectedLineState here,
+        // as it should already be set. The re-rendering should happen
+        // because selectedStationState changes to null.
+    } else {
+      console.log("selectedLine is NOT set after back button click");
+    }
+    console.log("Final panel state:", { showStationPanel, panelHeight });
+  };
+
   const handleLinePanelStationClick = (station) => {
     const map = mapInstanceRef.current;
     if (!map) return;
 
     // Find the station feature
-    const vectorLayerStations = map.getLayers().getArray().find(layer => 
+    const vectorLayerStations = map.getLayers().getArray().find(layer =>
       layer instanceof VectorLayer && layer.getSource().getUrl() === "/data/stations.geojson"
     );
 
@@ -651,9 +748,10 @@ const MapComponent = () => {
       const source = vectorLayerStations.getSource();
       const features = source.getFeatures();
       const stationFeature = features.find(f => f.get('name') === station.name);
-      
+
       if (stationFeature) {
-        handleStationClick(stationFeature);
+        // Pass true to indicate this click came from the line panel
+        handleStationClick(stationFeature, true);
       }
     }
   };
@@ -713,6 +811,8 @@ const MapComponent = () => {
                 onStationClick={handleStationClick}
                 stationSequences={stationSequences}
                 isDarkTheme={true}
+                onBackToLine={handleBackToLine}
+                showBackButton={cameFromLine}
               />
             </div>
           </div>
@@ -720,7 +820,7 @@ const MapComponent = () => {
       )}
 
       {/* Line Panel (Desktop) */}
-      {selectedLine && !showStationPanel && (
+      {selectedLine && !selectedStation && !showStationPanel && (
         <div
           className="fixed top-0 right-0 h-full z-50 hidden md:block"
           style={{
@@ -804,6 +904,8 @@ const MapComponent = () => {
                     onStationClick={handleStationClick}
                     stationSequences={stationSequences}
                     isDarkTheme={true}
+                    onBackToLine={handleBackToLine}
+                    showBackButton={cameFromLine}
                   />
                 ) : selectedLine ? (
                   <LinePanel
@@ -853,7 +955,7 @@ const MapComponent = () => {
         </button>
       </div>
 
-      <style jsx="true">{`
+      <style>{`
         @import url('https://fonts.googleapis.com/icon?family=Material+Icons');
         @import url('https://fonts.googleapis.com/css2?family=Cabin:wght@400;500;600;700&family=Noto+Sans+Tamil:wght@400;500;600;700&display=swap');
 
@@ -941,14 +1043,15 @@ const MapComponent = () => {
         /* Mobile-specific styles */
         @media (max-width: 768px) {
           .map-controls {
-            top: 5em;
+            top: auto;
+            bottom: 1em;
             right: 1em;
             flex-direction: column;
             gap: 0.75em;
           }
 
           .map-controls.side-panel-open {
-            right: 1em;
+            bottom: calc(40px + 1em);
           }
 
           .map-control-button {

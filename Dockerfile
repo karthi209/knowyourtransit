@@ -21,4 +21,4 @@ RUN npm install -g serve
 EXPOSE 5174
 
 # Start the app using serve
-CMD ["serve", "-s", "dist", "-l", "5173"]
+CMD ["serve", "-s", "dist", "-l", "5174"]

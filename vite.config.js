@@ -12,6 +12,7 @@ export default defineConfig(({ mode }) => {
     },
     define: {
       'process.env.VITE_API_URL': JSON.stringify(process.env.VITE_API_URL),  // Dynamically set API URL
+      'process.env.VITE_MOCK_LOCATION': JSON.stringify(process.env.VITE_MOCK_LOCATION), // Expose mock location env var
     },
   };
 });

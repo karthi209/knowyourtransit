@@ -40,6 +40,7 @@ const MapComponent = () => {
   const [cameFromLine, setCameFromLine] = useState(false);
   const [cameFromStation, setCameFromStation] = useState(false);
   const previousStationRef = useRef(null); // Ref to store station data when navigating to line from station
+  const [userLocation, setUserLocation] = useState(null); // New state for user's geolocation
 
   const mapContainerRef = useRef(null);
   const mapInstanceRef = useRef(null);
@@ -53,6 +54,8 @@ const MapComponent = () => {
   const selectedStationLayerRef = useRef(null);
   const pulseLayerRef = useRef(null);
   const osmBaseLayerRef = useRef(null);
+  const geolocationSourceRef = useRef(null); // Ref for geolocation vector source
+  const geolocationLayerRef = useRef(null); // Ref for geolocation vector layer
 
   useEffect(() => {
     if (mapInstanceRef.current) return; // Ensure map is only initialized once
@@ -123,6 +126,27 @@ const MapComponent = () => {
       zIndex: 999
     });
 
+    // Create a vector source and layer for geolocation marker
+    const geolocationSource = new VectorSource();
+    geolocationSourceRef.current = geolocationSource;
+    const geolocationLayer = new VectorLayer({
+      source: geolocationSource,
+      style: new Style({
+        image: new Circle({
+          radius: 6,
+          fill: new Fill({
+            color: '#3399CC'
+          }),
+          stroke: new Stroke({
+            color: '#fff',
+            width: 2
+          })
+        })
+      }),
+      zIndex: 1001 // Ensure it's on top
+    });
+    geolocationLayerRef.current = geolocationLayer;
+
     if (stationPopupRef.current) {
       overlayRef.current = new Overlay({
         element: stationPopupRef.current,
@@ -144,7 +168,8 @@ const MapComponent = () => {
         vectorLayerStationLayouts,
         vectorLayerStationWalks,
         pulseLayer,
-        selectedStationLayer
+        selectedStationLayer,
+        geolocationLayer // Add geolocation layer
       ],
       view: new View({
         center: fromLonLat([80.237617, 13.067439]),
@@ -195,6 +220,7 @@ const MapComponent = () => {
     // Store the selected station layer reference
     selectedStationLayerRef.current = selectedStationLayer;
     pulseLayerRef.current = pulseLayer;
+    geolocationLayerRef.current = geolocationLayer; // Store ref
 
     // Add pulse animation
     let pulseRadius = 15;
@@ -239,6 +265,7 @@ const MapComponent = () => {
       osmBaseLayerRef.current = null;
       selectedStationLayerRef.current = null;
       pulseLayerRef.current = null;
+      geolocationLayerRef.current = null;
     };
   }, []);
 
@@ -809,6 +836,75 @@ const MapComponent = () => {
     }
   };
 
+  // Function to get user's geolocation
+  const locateUser = () => {
+    // Check for mock location in development
+    if (import.meta.env.DEV && process.env.VITE_MOCK_LOCATION) {
+      console.log("Using mock location from VITE_MOCK_LOCATION");
+      try {
+        const [lon, lat] = process.env.VITE_MOCK_LOCATION.split(',').map(Number);
+        if (!isNaN(lon) && !isNaN(lat)) {
+          const olCoords = fromLonLat([lon, lat]);
+          setUserLocation(olCoords);
+
+          // Add or update geolocation feature on the map
+          const source = geolocationSourceRef.current;
+          if (source) {
+            source.clear(); // Clear previous marker
+            const feature = new Feature({
+              geometry: new Point(olCoords)
+            });
+            source.addFeature(feature);
+
+            // Center map on user's location
+            mapInstanceRef.current.getView().animate({
+              center: olCoords,
+              zoom: 15,
+              duration: 1000
+            });
+          }
+          return; // Exit the function after using mock location
+        } else {
+          console.error("Invalid MOCK_LOCATION format. Please use 'longitude,latitude'");
+        }
+      } catch (error) {
+        console.error("Error parsing MOCK_LOCATION:", error);
+      }
+    }
+
+    // Fallback to browser geolocation if no mock location or in production
+    if (!navigator.geolocation) {
+      alert('Geolocation is not supported by your browser');
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition((position) => {
+      const coords = [position.coords.longitude, position.coords.latitude];
+      const olCoords = fromLonLat(coords);
+      setUserLocation(olCoords);
+
+      // Add or update geolocation feature on the map
+      const source = geolocationSourceRef.current;
+      if (source) {
+        source.clear(); // Clear previous marker
+        const feature = new Feature({
+          geometry: new Point(olCoords)
+        });
+        source.addFeature(feature);
+
+        // Center map on user's location
+        mapInstanceRef.current.getView().animate({
+          center: olCoords,
+          zoom: 15,
+          duration: 1000
+        });
+      }
+    }, (error) => {
+      console.error('Error getting geolocation:', error);
+      alert('Unable to retrieve your location');
+    });
+  };
+
   return (
     <div className={`map-container ${isDarkTheme ? 'dark-theme' : ''} ${isFullscreen ? 'fullscreen' : ''}`}>
       {showWelcome && (
@@ -986,6 +1082,14 @@ const MapComponent = () => {
 
       {/* Map Controls */}
       <div className={`map-controls ${selectedStation && !showStationPanel ? 'side-panel-open' : ''}`}>
+        {/* Geolocation Button */}
+        <button
+          onClick={locateUser}
+          className="map-control-button"
+          title="Locate me"
+        >
+          <span className="material-icons">my_location</span>
+        </button>
         <button
           onClick={cycleMapStyle}
           className="map-control-button"

@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Map, Overlay, View } from "ol";
 import { Tile as TileLayer, Vector as VectorLayer } from "ol/layer";
 import XYZ from "ol/source/XYZ";
-import { fromLonLat } from "ol/proj";
+import { fromLonLat, toLonLat } from "ol/proj";
 import { createStringXY } from 'ol/coordinate';
 import { createVectorLayerStations, createVectorLayerLines, vectorLayerStationLayouts, vectorLayerStationWalks } from "./VectorLayers"; // Import vector layers
 import { useMapContext } from "../context/MapContext"; // Assuming you have a context provider for map state
@@ -19,6 +19,7 @@ import LinePanel from "./LinePanel";
 import WelcomeAnimation from './WelcomeAnimation';
 import { getFeatureStyle } from "../styles/LineStyles";
 import OSM from "ol/source/OSM";
+import NearestStationsPanel from './NearestStationsPanel'; // Import the new component
 
 const MapComponent = () => {
   const { setSelectedStation, setSelectedLine } = useMapContext();
@@ -41,6 +42,8 @@ const MapComponent = () => {
   const [cameFromStation, setCameFromStation] = useState(false);
   const previousStationRef = useRef(null); // Ref to store station data when navigating to line from station
   const [userLocation, setUserLocation] = useState(null); // New state for user's geolocation
+  const [nearestStations, setNearestStations] = useState([]); // State for nearest stations (will become categorized)
+  const [showNearestStationsPanel, setShowNearestStationsPanel] = useState(false); // State for panel visibility
 
   const mapContainerRef = useRef(null);
   const mapInstanceRef = useRef(null);
@@ -56,6 +59,8 @@ const MapComponent = () => {
   const osmBaseLayerRef = useRef(null);
   const geolocationSourceRef = useRef(null); // Ref for geolocation vector source
   const geolocationLayerRef = useRef(null); // Ref for geolocation vector layer
+  const radiusSourceRef = useRef(null); // Ref for radius circles vector source
+  const radiusLayerRef = useRef(null); // Ref for radius circles vector layer
 
   useEffect(() => {
     if (mapInstanceRef.current) return; // Ensure map is only initialized once
@@ -147,6 +152,43 @@ const MapComponent = () => {
     });
     geolocationLayerRef.current = geolocationLayer;
 
+    // Create source and layer for radius circles
+    const radiusSource = new VectorSource();
+    radiusSourceRef.current = radiusSource;
+    const radiusLayer = new VectorLayer({
+        source: radiusSource,
+        style: (feature) => {
+            // Styles for different radius circles
+            const radius = feature.get('radius'); // Radius in meters
+            let color = 'rgba(255, 255, 255, 0.1)';
+            let strokeColor = 'rgba(255, 255, 255, 0.3)';
+            let strokeWidth = 1;
+
+            if (radius === 600) {
+                color = 'rgba(0, 150, 136, 0.2)'; // Teal slightly more visible
+                strokeColor = 'rgba(0, 150, 136, 0.6)';
+            } else if (radius === 1000) {
+                color = 'rgba(33, 150, 243, 0.2)'; // Blue slightly more visible
+                 strokeColor = 'rgba(33, 150, 243, 0.6)';
+            } else if (radius === 2000) { // Changed from 3000 to 2000
+                color = 'rgba(156, 39, 176, 0.2)'; // Purple slightly more visible
+                 strokeColor = 'rgba(156, 39, 176, 0.6)';
+            }
+
+            return new Style({
+                stroke: new Stroke({
+                    color: strokeColor,
+                    width: strokeWidth,
+                }),
+                fill: new Fill({
+                    color: color,
+                }),
+            });
+        },
+        zIndex: 990 // Below geolocation marker but above lines
+    });
+    radiusLayerRef.current = radiusLayer;
+
     if (stationPopupRef.current) {
       overlayRef.current = new Overlay({
         element: stationPopupRef.current,
@@ -169,7 +211,8 @@ const MapComponent = () => {
         vectorLayerStationWalks,
         pulseLayer,
         selectedStationLayer,
-        geolocationLayer // Add geolocation layer
+        geolocationLayer, // Add geolocation layer
+        radiusLayer // Add radius circles layer
       ],
       view: new View({
         center: fromLonLat([80.237617, 13.067439]),
@@ -221,6 +264,8 @@ const MapComponent = () => {
     selectedStationLayerRef.current = selectedStationLayer;
     pulseLayerRef.current = pulseLayer;
     geolocationLayerRef.current = geolocationLayer; // Store ref
+    radiusSourceRef.current = radiusSource; // Store ref
+    radiusLayerRef.current = radiusLayer; // Store ref
 
     // Add pulse animation
     let pulseRadius = 15;
@@ -266,6 +311,8 @@ const MapComponent = () => {
       selectedStationLayerRef.current = null;
       pulseLayerRef.current = null;
       geolocationLayerRef.current = null;
+      radiusSourceRef.current = null;
+      radiusLayerRef.current = null;
     };
   }, []);
 
@@ -836,11 +883,118 @@ const MapComponent = () => {
     }
   };
 
+  // Haversine formula to calculate distance between two lat/lon points in kilometers
+  const haversineDistance = (coords1, coords2) => {
+    const toRadians = (degrees) => degrees * (Math.PI / 180);
+    const lat1 = toRadians(coords1[1]);
+    const lon1 = toRadians(coords1[0]);
+    const lat2 = toRadians(coords2[1]);
+    const lon2 = toRadians(coords2[0]);
+
+    const R = 6371; // Radius of Earth in kilometers
+    const deltaLat = lat2 - lat1;
+    const deltaLon = lon2 - lon1;
+
+    const a =
+      Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
+      Math.cos(lat1) *
+      Math.cos(lat2) *
+      Math.sin(deltaLon / 2) * Math.sin(deltaLon / 2);
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return R * c; // Distance in kilometers
+  };
+
+  // Function to find nearest stations within a radius
+  const findNearestStations = (locationCoords) => {
+    const map = mapInstanceRef.current;
+    if (!map || !locationCoords) {
+        console.log("findNearestStations called without map or locationCoords.", { map, locationCoords });
+        return;
+    }
+
+    console.log("findNearestStations called with locationCoords (EPSG:3857):", locationCoords);
+
+    const stationsLayer = map.getLayers().getArray().find(layer =>
+      layer instanceof VectorLayer && layer.getSource().getUrl() === "/data/stations.geojson"
+    );
+
+    if (!stationsLayer) {
+      console.warn("Stations layer not found to find nearest stations.");
+      setNearestStations([]);
+      return;
+    }
+
+    const stationFeatures = stationsLayer.getSource().getFeatures();
+    console.log("Total station features found:", stationFeatures.length);
+    const userLonLat = toLonLat(locationCoords); // Convert user location to lat/lon
+    console.log("User location (LonLat):", userLonLat);
+
+    const stationsWithDistance = stationFeatures
+      .filter(feature => feature.getGeometry() && feature.getGeometry().getCoordinates())
+      .map(feature => {
+        const stationLonLat = toLonLat(feature.getGeometry().getCoordinates()); // Convert station coords to lat/lon
+        const distance = haversineDistance(userLonLat, stationLonLat);
+        return {
+          feature: feature, // Keep reference to the feature
+          name: feature.get('name'),
+          line: feature.get('line'),
+          network: feature.get('network'),
+          distance: distance * 1000, // Store distance in meters for easier comparison with radii
+        };
+      });
+
+    // Categorize stations by distance
+    const categorizedStations = {
+        '0-600m': [],
+        '600m-1km': [],
+        '1km-2km': [],
+        // Removed 'Beyond 3km' category
+    };
+
+    stationsWithDistance.forEach(station => {
+        if (station.distance <= 600) {
+            categorizedStations['0-600m'].push(station);
+        } else if (station.distance > 600 && station.distance <= 1000) {
+            categorizedStations['600m-1km'].push(station);
+        } else if (station.distance > 1000 && station.distance <= 2000) { // Changed from 3000 to 2000
+            categorizedStations['1km-2km'].push(station);
+        } /* Removed else if for Beyond 3km */
+    });
+
+    // Sort stations within each category by distance
+    Object.keys(categorizedStations).forEach(categoryKey => {
+        categorizedStations[categoryKey].sort((a, b) => a.distance - b.distance);
+    });
+
+    console.log("Categorized nearest stations:", categorizedStations);
+    setNearestStations(categorizedStations);
+    setShowNearestStationsPanel(true); // Show the new panel
+    console.log("showNearestStationsPanel set to true.");
+
+    // Draw radius circles
+    const radiusSource = radiusSourceRef.current;
+    if (radiusSource) {
+        radiusSource.clear(); // Clear previous circles
+        const center = locationCoords; // Use locationCoords (EPSG:3857)
+        const radii = [600, 1000, 2000]; // Radii in meters (Changed from 500, 1000, 3000)
+
+        radii.forEach(r => {
+            const circle = new Circle(center, r);
+            const feature = new Feature(circle);
+            feature.set('radius', r); // Store radius as a property for styling
+            radiusSource.addFeature(feature);
+        });
+    }
+  };
+
   // Function to get user's geolocation
   const locateUser = () => {
+    console.log("locateUser called.");
     // Check for mock location in development
     if (import.meta.env.DEV && process.env.VITE_MOCK_LOCATION) {
-      console.log("Using mock location from VITE_MOCK_LOCATION");
+      console.log("Using mock location from VITE_MOCK_LOCATION.");
       try {
         const [lon, lat] = process.env.VITE_MOCK_LOCATION.split(',').map(Number);
         if (!isNaN(lon) && !isNaN(lat)) {
@@ -857,28 +1011,46 @@ const MapComponent = () => {
             source.addFeature(feature);
 
             // Center map on user's location
+            console.log("Animating map to mock location.");
             mapInstanceRef.current.getView().animate({
               center: olCoords,
               zoom: 15,
               duration: 1000
+            }, () => {
+                 // Callback after animation completes
+                 console.log("Animation to mock location complete.");
+                 // Find and show nearest stations AFTER zoom animation
+                 console.log("Calling findNearestStations after mock location animation.");
+                 findNearestStations(olCoords);
             });
+
+          } else {
+            console.error("Geolocation source not found.");
           }
-          return; // Exit the function after using mock location
+          // The findNearestStations call is now in the animation callback,
+          // so we can return immediately here if needed, but removing the
+          // explicit return might help if there's an async issue.
+          // return; // Removed explicit return here for testing
+
         } else {
           console.error("Invalid MOCK_LOCATION format. Please use 'longitude,latitude'");
         }
       } catch (error) {
         console.error("Error parsing MOCK_LOCATION:", error);
       }
+      // Added return here to ensure exit after mock location attempt
+      return;
     }
 
     // Fallback to browser geolocation if no mock location or in production
+    console.log("Falling back to native geolocation.");
     if (!navigator.geolocation) {
       alert('Geolocation is not supported by your browser');
       return;
     }
 
     navigator.geolocation.getCurrentPosition((position) => {
+      console.log("Native geolocation success.");
       const coords = [position.coords.longitude, position.coords.latitude];
       const olCoords = fromLonLat(coords);
       setUserLocation(olCoords);
@@ -893,10 +1065,17 @@ const MapComponent = () => {
         source.addFeature(feature);
 
         // Center map on user's location
+        console.log("Animating map to native location.");
         mapInstanceRef.current.getView().animate({
           center: olCoords,
           zoom: 15,
           duration: 1000
+        }, () => {
+             // Callback after animation completes
+             console.log("Animation to native location complete.");
+             // Find and show nearest stations AFTER zoom animation
+             console.log("Calling findNearestStations after native location animation.");
+             findNearestStations(olCoords);
         });
       }
     }, (error) => {
@@ -904,6 +1083,23 @@ const MapComponent = () => {
       alert('Unable to retrieve your location');
     });
   };
+
+  // Function to close the nearest stations panel
+  const closeNearestStationsPanel = () => {
+    setNearestStations([]); // Clear the list
+    setShowNearestStationsPanel(false); // Hide the panel
+    // Clear radius circles when closing panel
+    if (radiusSourceRef.current) {
+        radiusSourceRef.current.clear();
+    }
+  };
+
+  // Clear radius circles when user location is cleared
+  useEffect(() => {
+    if (!userLocation && radiusSourceRef.current) {
+        radiusSourceRef.current.clear();
+    }
+  }, [userLocation]);
 
   return (
     <div className={`map-container ${isDarkTheme ? 'dark-theme' : ''} ${isFullscreen ? 'fullscreen' : ''}`}>
@@ -1077,6 +1273,29 @@ const MapComponent = () => {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* Nearest Stations Panel (Mobile and Desktop) */}
+      {showNearestStationsPanel && (
+        <div className={`fixed inset-x-0 bottom-0 z-50 md:inset-y-0 md:left-auto md:right-0 md:w-96 md:max-w-sm bg-black/95 backdrop-blur-sm border-t border-white/10 md:border-t-0 md:border-l`}>
+            {/* We will add content here in the next step */}
+            {/* For now, just a placeholder with a close button */}
+             <div className="w-full h-12 flex items-center justify-between px-4 bg-black/50 border-b border-white/10">
+              <div className="text-lg font-medium text-white">Nearest Stations</div>
+              <button
+                onClick={closeNearestStationsPanel}
+                className="p-2 rounded-full hover:bg-white/10 transition-colors"
+              >
+                <span className="material-icons text-white/60">close</span>
+              </button>
+            </div>
+            {/* Pass nearestStations to the actual panel component later */}
+            <NearestStationsPanel
+              nearestStations={nearestStations}
+              onClose={closeNearestStationsPanel}
+              onStationClick={handleStationClick}
+            />
         </div>
       )}
 

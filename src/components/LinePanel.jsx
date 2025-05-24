@@ -1,7 +1,7 @@
 import React from "react";
 import { X } from "lucide-react";
 
-const LinePanel = ({ selectedLine, onClose, stationSequences, isDarkTheme, onStationClick }) => {
+const LinePanel = ({ selectedLine, onClose, stationSequences, isDarkTheme, onStationClick, cameFromStation, onBackToStation }) => {
   if (!selectedLine) return null;
 
   const lineColors = {
@@ -46,7 +46,20 @@ const LinePanel = ({ selectedLine, onClose, stationSequences, isDarkTheme, onSta
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="p-4 border-b border-white/10">
+      <div className="p-4 border-b border-white/10 flex items-center gap-3">
+        {cameFromStation && (
+          <button
+            onClick={onBackToStation}
+            className="p-2 rounded-full hover:bg-white/10 transition-colors"
+            title="Back to Station"
+          >
+            <span className="material-icons text-white/60">arrow_back</span>
+          </button>
+        )}
+        <div
+          className="w-4 h-4 rounded-full"
+          style={{ backgroundColor: getLineColor(selectedLine) }}
+        ></div>
         <h2 className="text-xl font-semibold text-white">{selectedLine}</h2>
       </div>
 
@@ -61,25 +74,29 @@ const LinePanel = ({ selectedLine, onClose, stationSequences, isDarkTheme, onSta
             {sequence.stations.map((station, index) => (
               // Ensure station object and name property exist
               station && station.name ? (
-                <div key={station.id || station.name} className="relative mb-6 last:mb-0">
-                  {/* Station circle */}
-                  <div className="absolute left-3 w-3 h-3 rounded-full bg-white/80 border-2 border-white/40 transform -translate-x-1/2"></div>
-                  
-                  {/* Station number */}
-                  <div className="absolute left-3 w-6 h-6 rounded-full bg-white/20 border border-white/40 transform -translate-x-1/2 -translate-y-1/2 flex items-center justify-center text-xs font-medium text-white">
-                    {index + 1}
+                <div key={station.id || station.name} className="relative mb-4 last:mb-0 flex items-center">
+                  {/* Vertical line segment - relative to this flex item */}
+                  {index > 0 && (
+                    <div className="absolute top-0 left-[11.5px] w-0.5 h-3 -translate-x-1/2 bg-white/20"></div>
+                  )}
+                  {/* Station Indicator Column */}
+                  <div className="flex flex-row items-center justify-center z-10" style={{ width: '32px', flexShrink: 0 }}>
+                    {/* Single solid circle with number */}
+                    <div className="w-6 h-6 rounded-full border border-white/40 flex items-center justify-center text-xs font-medium text-black bg-white">
+                      {index + 1}
+                    </div>
                   </div>
-                  
-                  {/* Station name with logo */}
-                  <div 
-                    className="ml-8 cursor-pointer hover:bg-white/5 rounded-lg p-2 transition-colors"
+
+                  {/* Station Name and Details Column */}
+                  <div
+                    className="flex-1 cursor-pointer hover:bg-white/5 rounded-lg p-2 transition-colors"
                     onClick={() => onStationClick(station)}
                   >
                     <div className="flex items-center gap-2">
                       {/* Use station.network to get the correct logo */}
-                      <img 
-                        src={getLogo(station.network)} 
-                        alt="Station Type" 
+                      <img
+                        src={getLogo(station.network)}
+                        alt="Station Type"
                         className="h-5 w-auto opacity-80"
                       />
                       <div className="text-white font-medium">{station.name}</div>
@@ -88,6 +105,10 @@ const LinePanel = ({ selectedLine, onClose, stationSequences, isDarkTheme, onSta
                       <div className="text-white/60 text-sm font-noto-tamil ml-7">{station.name_ta}</div>
                     )}
                   </div>
+                   {/* Vertical line segment - relative to this flex item */}
+                   {index < sequence.stations.length - 1 && (
+                    <div className="absolute bottom-0 left-[11.5px] w-0.5 h-[12px] -translate-x-1/2 bg-white/20"></div>
+                  )}
                 </div>
               ) : null
             ))}

@@ -38,6 +38,8 @@ const MapComponent = () => {
   const [showWelcome, setShowWelcome] = useState(true);
   const [mapStyle, setMapStyle] = useState('dark'); // 'dark', 'light', 'satellite', 'osm'
   const [cameFromLine, setCameFromLine] = useState(false);
+  const [cameFromStation, setCameFromStation] = useState(false);
+  const previousStationRef = useRef(null); // Ref to store station data when navigating to line from station
 
   const mapContainerRef = useRef(null);
   const mapInstanceRef = useRef(null);
@@ -756,6 +758,57 @@ const MapComponent = () => {
     }
   };
 
+  // New function to handle line clicks from StationPanel
+  const handleLineClickFromStation = (lineName) => {
+    // Store the current station data before clearing it
+    previousStationRef.current = selectedStation;
+    console.log("handleLineClickFromStation: Stored previous station:", previousStationRef.current);
+
+    // Clear station selection to close StationPanel
+    setSelectedStationState(null);
+    if (overlayRef.current) {
+      overlayRef.current.setPosition(undefined);
+    }
+
+    // Set selected line to open LinePanel
+    setSelectedLineState(lineName);
+
+    // Set cameFromStation to true since we came from the station panel
+    setCameFromStation(true);
+
+    // Manage panel visibility (especially for mobile)
+    const isMobile = window.innerWidth <= 768;
+    if (isMobile) {
+      setShowStationPanel(true);
+      setPanelHeight(window.innerHeight * 0.6);
+    } else {
+      // On desktop, selectedLine change will handle panel visibility
+      // No need to set showStationPanel
+    }
+
+    // Optionally, zoom/pan to the line extent here if desired, similar to handleSearchLineSelect
+    // Or rely on the effect that watches selectedLine to do the zooming
+  };
+
+  // New function to handle going back to the station panel from the line panel
+  const handleBackToStation = () => {
+    setCameFromStation(false); // Reset cameFromStation state
+    setSelectedLineState(null); // Clear line selection to close LinePanel
+
+    // Restore the previous station data and show StationPanel
+    setSelectedStationState(previousStationRef.current);
+    previousStationRef.current = null; // Clear the ref
+
+    const isMobile = window.innerWidth <= 768;
+    if (isMobile) {
+      setShowStationPanel(true); // Show the mobile panel
+      setPanelHeight(window.innerHeight * 0.6); // Ensure panel is open
+    } else {
+      // On desktop, changing selectedLineState to null and setting selectedStationState
+      // should correctly show the StationPanel.
+    }
+  };
+
   return (
     <div className={`map-container ${isDarkTheme ? 'dark-theme' : ''} ${isFullscreen ? 'fullscreen' : ''}`}>
       {showWelcome && (
@@ -769,7 +822,7 @@ const MapComponent = () => {
       />
       
       {/* Station Panel (Desktop) */}
-      {selectedStation && !showStationPanel && (
+      {selectedStation && (
         <div
           ref={stationPopupRef}
           className="fixed top-0 right-0 h-full z-50 hidden md:block"
@@ -813,6 +866,7 @@ const MapComponent = () => {
                 isDarkTheme={true}
                 onBackToLine={handleBackToLine}
                 showBackButton={cameFromLine}
+                onLineClick={handleLineClickFromStation}
               />
             </div>
           </div>
@@ -851,6 +905,8 @@ const MapComponent = () => {
                 stationSequences={stationSequences}
                 isDarkTheme={true}
                 onStationClick={handleLinePanelStationClick}
+                cameFromStation={cameFromStation}
+                onBackToStation={handleBackToStation}
               />
             </div>
           </div>
@@ -906,6 +962,7 @@ const MapComponent = () => {
                     isDarkTheme={true}
                     onBackToLine={handleBackToLine}
                     showBackButton={cameFromLine}
+                    onLineClick={handleLineClickFromStation}
                   />
                 ) : selectedLine ? (
                   <LinePanel
@@ -917,6 +974,8 @@ const MapComponent = () => {
                     stationSequences={stationSequences}
                     isDarkTheme={true}
                     onStationClick={handleLinePanelStationClick}
+                    cameFromStation={cameFromStation}
+                    onBackToStation={handleBackToStation}
                   />
                 ) : null}
               </div>

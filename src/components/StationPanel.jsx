@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { X, ChevronDown, ChevronUp } from "lucide-react";
 
-const StationPanel = ({ selectedStation, onClose, onStationClick, stationSequences, isDarkTheme, onBackToLine, showBackButton }) => {
+const StationPanel = ({ selectedStation, onClose, onStationClick, stationSequences, isDarkTheme, onBackToLine, showBackButton, onLineClick }) => {
   if (!selectedStation) return null;
 
   const [expandedLine, setExpandedLine] = useState(null);
@@ -103,7 +103,10 @@ const StationPanel = ({ selectedStation, onClose, onStationClick, stationSequenc
   };
 
   const StationSequence = ({ line, currentStation, isDarkTheme }) => {
+    console.log("StationSequence component rendering for line:", line);
+    console.log("StationSequences prop structure:", stationSequences);
     const sequence = stationSequences?.[line] || [];
+    console.log("Derived sequence for line:", line, ":", sequence);
     const currentIndex = sequence.findIndex(
       (station) => station === currentStation
     );
@@ -177,20 +180,24 @@ const StationPanel = ({ selectedStation, onClose, onStationClick, stationSequenc
           <span className="detail-label">Line:</span>
           <div className="flex flex-wrap gap-2">
             {selectedStation.line.split(",").map((line, index) => (
-              <div
+              <button
                 key={index}
-                className="flex items-center gap-1 px-2 py-1 rounded-full text-sm"
+                className="flex items-center gap-1 px-2 py-1 rounded-full text-sm cursor-pointer hover:opacity-80 transition-opacity"
                 style={{
                   backgroundColor: `${getLineColor(line.trim())}20`,
-                  color: getLineColor(line.trim())
+                  color: getLineColor(line.trim()),
+                  border: 'none',
+                  padding: '4px 8px',
+                  textAlign: 'left',
                 }}
+                onClick={() => onLineClick(line.trim())}
               >
                 <div
                   className="w-2 h-2 rounded-full"
                   style={{ backgroundColor: getLineColor(line.trim()) }}
                 />
                 {line.trim()}
-              </div>
+              </button>
             ))}
           </div>
         </div>
@@ -235,37 +242,6 @@ const StationPanel = ({ selectedStation, onClose, onStationClick, stationSequenc
             </button>
           ))}
         </div>
-      </div>
-
-      <div className="station-sequences">
-        <h3 className="section-title">Line Sequences</h3>
-        {selectedStation.line.split(",").map((line, index) => (
-          <div key={index} className="mb-4">
-            <button
-              className="w-full flex items-center justify-between p-3 rounded-lg transition-colors"
-              onClick={() => setExpandedLine(expandedLine === line ? null : line)}
-              style={{
-                backgroundColor: isDarkTheme ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'
-              }}
-            >
-              <div className="flex items-center gap-2">
-                <div
-                  className="w-3 h-3 rounded-full"
-                  style={{ backgroundColor: getLineColor(line.trim()) }}
-                />
-                <span className="font-medium">{line.trim()}</span>
-              </div>
-              {expandedLine === line ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-            </button>
-            {expandedLine === line && (
-              <StationSequence
-                line={line.trim()}
-                currentStation={selectedStation.name}
-                isDarkTheme={isDarkTheme}
-              />
-            )}
-          </div>
-        ))}
       </div>
 
       <style jsx>{`
@@ -412,10 +388,6 @@ const StationPanel = ({ selectedStation, onClose, onStationClick, stationSequenc
         .connection-name {
           font-weight: 500;
           opacity: 0.9;
-        }
-
-        .station-sequences {
-          margin-top: 1.5rem;
         }
 
         @media (max-width: 768px) {

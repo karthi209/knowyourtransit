@@ -1,0 +1,132 @@
+name: build-n-release
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_frontend:
+        description: 'Build frontend image'
+        required: true
+        default: 'false'
+        type: boolean
+      deploy_frontend:
+        description: 'Deploy frontend image'
+        required: true
+        default: 'false'
+        type: boolean
+
+permissions:
+  contents: write
+  packages: write
+  attestations: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        with:
+          clean: true
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Read current versions from VERSION.txt
+        id: read_versions
+        run: |
+          FRONTEND_VERSION=$(grep "frontend=" VERSION.txt | cut -d '=' -f 2)
+          echo "FRONTEND_VERSION=$FRONTEND_VERSION" >> $GITHUB_ENV
+          
+      - name: Increment frontend version
+        if: ${{ github.event.inputs.build_frontend == 'true' }}
+        run: |
+          FRONTEND_VERSION_NO_V=$(echo ${{ env.FRONTEND_VERSION }} | sed 's/^v//')  # Remove leading 'v' if present
+          FRONTEND_NEW_VERSION="v$(echo $FRONTEND_VERSION_NO_V | cut -d'.' -f1).$(echo $FRONTEND_VERSION_NO_V | cut -d'.' -f2).$(($(echo $FRONTEND_VERSION_NO_V | cut -d'.' -f3) + 1))"
+          echo "New frontend version: $FRONTEND_NEW_VERSION"
+          echo "FRONTEND_NEW_VERSION=$FRONTEND_NEW_VERSION" >> $GITHUB_ENV
+
+      # Manually build and push frontend image
+      - name: Build and push frontend image
+        if: ${{ github.event.inputs.build_frontend == 'true' }}
+        id: push_frontend
+        run: |
+          docker build -t ghcr.io/karthi209/knowyourtransit/frontend:${{ env.FRONTEND_NEW_VERSION }} -f Dockerfile .
+          docker push ghcr.io/karthi209/knowyourtransit/frontend:${{ env.FRONTEND_NEW_VERSION }}
+
+      # Only update the version if the push succeeded
+      - name: Update frontend version in VERSION.txt
+        if: ${{ github.event.inputs.build_frontend == 'true' && steps.push_frontend.outcome == 'success' }}
+        run: |
+          sed -i "s/frontend=.*/frontend=${{ env.FRONTEND_NEW_VERSION }}/" VERSION.txt
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
+          git add VERSION.txt
+          git commit -m "Update frontend version"
+          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} HEAD:${{ github.ref }}
+  
+  deploy_frontend:
+    if: ${{ github.event.inputs.deploy_frontend == 'true' }}
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        with:
+          clean: true
+
+      - name: Pull latest changes from repository
+        run: git pull origin HEAD
+
+      - name: Read frontend version from VERSION.txt
+        run: |
+          FRONTEND_VERSION=$(grep "frontend=" VERSION.txt | cut -d '=' -f 2)
+          echo "FRONTEND_VERSION=$FRONTEND_VERSION" >> $GITHUB_ENV
+
+      - name: Use frontend version from input or VERSION.txt
+        run: |
+          if [ -z "${{ github.event.inputs.frontend_version }}" ]; then
+            echo "Using frontend version from VERSION.txt: ${{ env.FRONTEND_VERSION }}"
+            FRONTEND_VERSION_TO_DEPLOY="${{ env.FRONTEND_VERSION }}"
+          else
+            echo "Using frontend version from input: ${{ github.event.inputs.frontend_version }}"
+            FRONTEND_VERSION_TO_DEPLOY="${{ github.event.inputs.frontend_version }}"
+          fi
+          echo "FRONTEND_VERSION_TO_DEPLOY=$FRONTEND_VERSION_TO_DEPLOY" >> $GITHUB_ENV
+
+      - name: Deploy frontend Docker container to production server using SSH with password
+        run: |
+          sshpass -p "${{ secrets.SSH_PASSWORD }}" ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_IP }} << 'EOF'
+            docker stop frontend-knowyourtransit|| true
+            docker rm frontend-knowyourtransit || true
+            docker rmi $(docker images ghcr.io/karthi209/knowyourtransit/frontend -q) || true
+            docker network inspect network-onesandzeros > /dev/null 2>&1 || docker network create network-onesandzeros
+            docker pull ghcr.io/karthi209/knowyourtransitfrontend:${{ env.FRONTEND_VERSION_TO_DEPLOY }}
+            docker run -d --name frontend-knowyourtransit -p 5174:5174 --network network-onesandzeros ghcr.io/karthi209/knowyourtransit/frontend:${{ env.FRONTEND_VERSION_TO_DEPLOY }}
+            docker update --restart unless-stopped frontend-knowyourtransit
+          EOF
+
+      - name: Check if frontend container is running
+        run: |
+          echo "Checking if frontend container is running on remote server..."
+          TIMEOUT=120  # 2 minutes in seconds
+          START_TIME=$(date +%s)
+          
+          until sshpass -p "${{ secrets.SSH_PASSWORD }}" ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_IP }} "docker ps --filter 'name=frontend-onesandzeros' --filter 'status=running' --format '{{.Names}}' | grep -w 'frontend-onesandzeros'"; do
+            echo "Container not found or not running yet. Retrying in 5 seconds..."
+            sleep 5
+            
+            CURRENT_TIME=$(date +%s)
+            ELAPSED_TIME=$((CURRENT_TIME - START_TIME))
+            
+            if [ $ELAPSED_TIME -ge $TIMEOUT ]; then
+              echo "Frontend container did not start within 2 minutes. Exiting."
+              exit 1  # Exit with an error code
+            fi
+          done
+          echo "frontend-onesandzeros container is running!"
+

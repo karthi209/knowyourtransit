@@ -511,8 +511,8 @@ const MapComponent = () => {
       }
     } else {
       setShowStationPanel(false);
-      if (overlayRef.current) {
-        overlayRef.current.setPosition(feature.getGeometry().getCoordinates());
+    if (overlayRef.current) {
+      overlayRef.current.setPosition(feature.getGeometry().getCoordinates());
       }
     }
   };
@@ -1213,10 +1213,10 @@ const MapComponent = () => {
       
       {/* Station Panel (Desktop) */}
       {selectedStation && (
-        <div
-          ref={stationPopupRef}
+      <div
+        ref={stationPopupRef}
           className="fixed top-0 right-0 h-full z-50 hidden md:block"
-          style={{
+        style={{
             width: '400px',
             maxWidth: '40vw',
             transition: 'transform 0.3s ease-out'
@@ -1239,8 +1239,8 @@ const MapComponent = () => {
               >
                 <span className="material-icons text-white/60">close</span>
               </button>
-            </div>
-            
+      </div>
+
             {/* Panel content */}
             <div className="flex-1 overflow-y-auto text-white/80">
               <StationPanel
@@ -1350,14 +1350,14 @@ const MapComponent = () => {
                      onStationClick={handleStationClick}
                     />
                 ) : selectedStation ? (
-                    <StationPanel
-                      selectedStation={selectedStation}
+        <StationPanel
+          selectedStation={selectedStation}
                       onClose={() => {
                         setShowStationPanel(false);
                         setPanelHeight(0);
                       }}
-                      onStationClick={handleStationClick}
-                      stationSequences={stationSequences}
+          onStationClick={handleStationClick}
+          stationSequences={stationSequences}
                       isDarkTheme={true}
                       onBackToLine={handleBackToLine}
                       showBackButton={cameFromLine}

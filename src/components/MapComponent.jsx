@@ -877,8 +877,8 @@ const MapComponent = () => {
             }}
           >
             {/* Drag handle with logo */}
-            <div 
-              className="w-full h-12 flex items-center justify-between px-4 cursor-grab active:cursor-grabbing touch-none bg-black/50 border-b border-white/10 rounded-t-2xl"
+            <div
+              className="w-full h-16 flex items-center justify-between px-4 cursor-grab active:cursor-grabbing touch-none bg-black/50 border-b border-white/10 rounded-t-2xl"
               onTouchStart={handleTouchStart}
               onTouchMove={handleTouchMove}
               onTouchEnd={handleTouchEnd}
@@ -1043,8 +1043,8 @@ const MapComponent = () => {
         /* Mobile-specific styles */
         @media (max-width: 768px) {
           .map-controls {
-            top: auto;
-            bottom: 1em;
+            top: 6em;
+            bottom: auto;
             right: 1em;
             flex-direction: column;
             gap: 0.75em;

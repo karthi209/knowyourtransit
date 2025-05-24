@@ -43,7 +43,8 @@ const MapComponent = () => {
   const previousStationRef = useRef(null); // Ref to store station data when navigating to line from station
   const [userLocation, setUserLocation] = useState(null); // New state for user's geolocation
   const [nearestStations, setNearestStations] = useState([]); // State for nearest stations (will become categorized)
-  const [showNearestStationsPanel, setShowNearestStationsPanel] = useState(false); // State for panel visibility
+  const [showNearestStationsPanel, setShowNearestStationsPanel] = useState(false); // State for panel visibility (Desktop)
+  const [showMobileNearestStationsPanel, setShowMobileNearestStationsPanel] = useState(false); // State for panel visibility (Mobile)
 
   const mapContainerRef = useRef(null);
   const mapInstanceRef = useRef(null);
@@ -157,22 +158,36 @@ const MapComponent = () => {
     radiusSourceRef.current = radiusSource;
     const radiusLayer = new VectorLayer({
         source: radiusSource,
-        style: (feature) => {
+        style: (feature, resolution) => {
             // Styles for different radius circles
             const radius = feature.get('radius'); // Radius in meters
+            // Calculate radius in screen pixels based on resolution
+            const radiusInPixels = radius / resolution;
+            // Ensure a minimum pixel radius for visibility at very high zoom
+            const minPixelRadius = 5; // Adjust as needed
+            const effectiveRadius = Math.max(radiusInPixels, minPixelRadius);
+
             let color = 'rgba(255, 255, 255, 0.1)';
             let strokeColor = 'rgba(255, 255, 255, 0.3)';
             let strokeWidth = 1;
 
-            if (radius === 600) {
-                color = 'rgba(0, 150, 136, 0.2)'; // Teal slightly more visible
-                strokeColor = 'rgba(0, 150, 136, 0.6)';
+            if (radius === 500) {
+                color = 'rgba(255, 0, 0, 0.15)'; // More visible red fill
+                strokeColor = 'rgba(255, 0, 0, 0.3)'; // More visible red stroke
+                strokeWidth = 1.5;
             } else if (radius === 1000) {
-                color = 'rgba(33, 150, 243, 0.2)'; // Blue slightly more visible
-                 strokeColor = 'rgba(33, 150, 243, 0.6)';
-            } else if (radius === 2000) { // Changed from 3000 to 2000
-                color = 'rgba(156, 39, 176, 0.2)'; // Purple slightly more visible
-                 strokeColor = 'rgba(156, 39, 176, 0.6)';
+                color = 'rgba(0, 255, 0, 0.08)'; // Medium green fill
+                strokeColor = 'rgba(0, 255, 0, 0.15)'; // Medium green stroke
+                strokeWidth = 1;
+            } else if (radius === 1500) {
+                color = 'rgba(0, 0, 255, 0.04)'; // Most transparent blue fill
+                strokeColor = 'rgba(0, 0, 255, 0.08)'; // Most transparent blue stroke
+                strokeWidth = 0.8;
+            } else {
+                 // Default style if radius doesn't match expected values (shouldn't happen for 600, 1000, 2000)
+                 color = 'rgba(128, 128, 128, 0.5)';
+                 strokeColor = 'rgba(128, 128, 128, 1)';
+                 strokeWidth = 1;
             }
 
             return new Style({
@@ -182,6 +197,16 @@ const MapComponent = () => {
                 }),
                 fill: new Fill({
                     color: color,
+                }),
+                image: new Circle({
+                    radius: effectiveRadius, // Use calculated pixel radius
+                    fill: new Fill({
+                        color: color,
+                    }),
+                    stroke: new Stroke({ // Apply stroke to the image as well
+                        color: strokeColor,
+                        width: strokeWidth,
+                    }),
                 }),
             });
         },
@@ -245,6 +270,19 @@ const MapComponent = () => {
     map.addControl(rotateControl);
 
     mapInstanceRef.current = map;
+
+    // Add console log to check radius layer visibility after map initialization (with a slight delay)
+    setTimeout(() => {
+        if (radiusLayerRef.current) {
+            console.log("Radius layer visibility after map init (delayed check):");
+            console.log(radiusLayerRef.current.getVisible());
+        }
+    }, 100); // Small delay
+
+    // Add map resolution listener
+    map.getView().on('change:resolution', (event) => {
+        console.log("Map resolution changed:", event.target.getResolution());
+    });
 
     const vectorLayerStations = createVectorLayerStations(map);
     map.addLayer(vectorLayerStations);
@@ -350,6 +388,11 @@ const MapComponent = () => {
     // Allow dragging down to 40px height and up to 60% of screen height
     const newHeight = Math.max(40, Math.min(window.innerHeight * 0.6, window.innerHeight * 0.6 - deltaY));
     setPanelHeight(newHeight);
+    
+    // Optional: Trigger a map render or update
+    if (mapInstanceRef.current) {
+      mapInstanceRef.current.renderSync();
+    }
   };
 
   const handleTouchEnd = () => {
@@ -364,6 +407,12 @@ const MapComponent = () => {
     } else {
       // Snap back to full height
       setPanelHeight(window.innerHeight * 0.6);
+    }
+    
+    // Optional: Trigger a map render or update after drag ends
+    if (mapInstanceRef.current) {
+      mapInstanceRef.current.updateSize(); // Update map size after panel height change
+      mapInstanceRef.current.renderSync();
     }
   };
 
@@ -947,19 +996,19 @@ const MapComponent = () => {
 
     // Categorize stations by distance
     const categorizedStations = {
-        '0-600m': [],
-        '600m-1km': [],
-        '1km-2km': [],
+        '0-500m': [],
+        '500m-1km': [],
+        '1km-1.5km': [],
         // Removed 'Beyond 3km' category
     };
 
     stationsWithDistance.forEach(station => {
-        if (station.distance <= 600) {
-            categorizedStations['0-600m'].push(station);
-        } else if (station.distance > 600 && station.distance <= 1000) {
-            categorizedStations['600m-1km'].push(station);
-        } else if (station.distance > 1000 && station.distance <= 2000) { // Changed from 3000 to 2000
-            categorizedStations['1km-2km'].push(station);
+        if (station.distance <= 500) {
+            categorizedStations['0-500m'].push(station);
+        } else if (station.distance > 500 && station.distance <= 1000) {
+            categorizedStations['500m-1km'].push(station);
+        } else if (station.distance > 1000 && station.distance <= 1500) {
+            categorizedStations['1km-1.5km'].push(station);
         } /* Removed else if for Beyond 3km */
     });
 
@@ -968,24 +1017,45 @@ const MapComponent = () => {
         categorizedStations[categoryKey].sort((a, b) => a.distance - b.distance);
     });
 
-    console.log("Categorized nearest stations:", categorizedStations);
+    console.log("Categorized stations:", categorizedStations);
+
     setNearestStations(categorizedStations);
-    setShowNearestStationsPanel(true); // Show the new panel
-    console.log("showNearestStationsPanel set to true.");
+    // Check if there are any stations before showing the panel
+    const hasStationsToShow = Object.values(categorizedStations).some(category => category.length > 0);
+    if (hasStationsToShow) {
+       const isMobile = window.innerWidth <= 768;
+       if (isMobile) {
+         setShowMobileNearestStationsPanel(true); // Show mobile nearest stations panel
+         // We don't set showStationPanel here, it's set in locateUser
+       } else {
+          setShowNearestStationsPanel(true); // Show desktop panel
+       }
+    } else {
+       setShowNearestStationsPanel(false); // Hide panel if no stations are found
+       setShowMobileNearestStationsPanel(false); // Also hide mobile panel if no stations
+    }
 
     // Draw radius circles
     const radiusSource = radiusSourceRef.current;
     if (radiusSource) {
         radiusSource.clear(); // Clear previous circles
         const center = locationCoords; // Use locationCoords (EPSG:3857)
-        const radii = [600, 1000, 2000]; // Radii in meters (Changed from 500, 1000, 3000)
+        const radii = [500, 1000, 1500]; // Radii in meters
 
         radii.forEach(r => {
-            const circle = new Circle(center, r);
-            const feature = new Feature(circle);
+            // Create a Point feature at the center
+            const point = new Point(center);
+            const feature = new Feature(point);
             feature.set('radius', r); // Store radius as a property for styling
             radiusSource.addFeature(feature);
+            console.log(`Added circle feature with radius ${r} to source. Feature:`, feature);
         });
+
+        // Explicitly ensure layer is visible and trigger re-render
+        radiusLayerRef.current.setVisible(true);
+        radiusLayerRef.current.changed();
+        console.log("Explicitly set radius layer visible and called changed().");
+
     }
   };
 
@@ -1021,6 +1091,15 @@ const MapComponent = () => {
                  console.log("Animation to mock location complete.");
                  // Find and show nearest stations AFTER zoom animation
                  console.log("Calling findNearestStations after mock location animation.");
+                 const isMobile = window.innerWidth <= 768;
+                 if (isMobile) {
+                   // Set states to show nearest stations panel on mobile
+                   setSelectedStationState(null); // Clear any selected station
+                   setSelectedLineState(null); // Clear any selected line
+                   setShowStationPanel(true); // Show the mobile wrapper panel
+                   setShowMobileNearestStationsPanel(true); // Explicitly show nearest stations panel
+                   setPanelHeight(window.innerHeight * 0.6); // Set initial height
+                 }
                  findNearestStations(olCoords);
             });
 
@@ -1075,6 +1154,15 @@ const MapComponent = () => {
              console.log("Animation to native location complete.");
              // Find and show nearest stations AFTER zoom animation
              console.log("Calling findNearestStations after native location animation.");
+             const isMobile = window.innerWidth <= 768;
+             if (isMobile) {
+               // Set states to show nearest stations panel on mobile
+               setSelectedStationState(null); // Clear any selected station
+               setSelectedLineState(null); // Clear any selected line
+               setShowStationPanel(true); // Show the mobile wrapper panel
+               setShowMobileNearestStationsPanel(true); // Explicitly show nearest stations panel
+               setPanelHeight(window.innerHeight * 0.6); // Set initial height
+             }
              findNearestStations(olCoords);
         });
       }
@@ -1087,11 +1175,21 @@ const MapComponent = () => {
   // Function to close the nearest stations panel
   const closeNearestStationsPanel = () => {
     setNearestStations([]); // Clear the list
-    setShowNearestStationsPanel(false); // Hide the panel
-    // Clear radius circles when closing panel
-    if (radiusSourceRef.current) {
-        radiusSourceRef.current.clear();
+    setShowNearestStationsPanel(false); // Hide the desktop panel
+    setShowMobileNearestStationsPanel(false); // Hide mobile panel
+    // When closing nearest stations, also hide the mobile wrapper panel if it's showing nearest stations
+    const isMobile = window.innerWidth <= 768;
+    if (isMobile) {
+      // Check if the mobile wrapper is showing the nearest stations panel before hiding it
+      // This is to avoid closing other panels if they were open
+      // A more robust solution might involve tracking the active mobile panel type directly
+      setShowStationPanel(false);
+      setPanelHeight(0);
     }
+     // Clear radius circles when closing panel
+     if (radiusSourceRef.current) {
+         radiusSourceRef.current.clear();
+     }
   };
 
   // Clear radius circles when user location is cleared
@@ -1207,7 +1305,7 @@ const MapComponent = () => {
 
       {/* Mobile Panels */}
       {showStationPanel && (
-        <div 
+        <div
           ref={panelRef}
           className="fixed inset-x-0 bottom-0 z-50 md:hidden"
           style={{
@@ -1216,9 +1314,9 @@ const MapComponent = () => {
             backgroundColor: 'transparent'
           }}
         >
-          <div 
+          <div
             className="bg-black/95 backdrop-blur-sm rounded-t-2xl border-t border-white/10"
-            style={{ 
+            style={{
               height: '100%',
               display: 'flex',
               flexDirection: 'column'
@@ -1233,7 +1331,7 @@ const MapComponent = () => {
             >
               <div className="flex items-center gap-2">
                 <div className="text-lg font-medium text-white">
-                  {selectedStation ? 'Station Details' : 'Line Details'}
+                  {showMobileNearestStationsPanel ? 'Nearest Stations' : selectedStation ? 'Station Details' : selectedLine ? 'Line Details' : ''}
                 </div>
               </div>
               <div className="w-12 h-1 bg-white/20 rounded-full"></div>
@@ -1242,33 +1340,42 @@ const MapComponent = () => {
             {/* Panel content */}
             {panelHeight > 40 && (
               <div className="flex-1 overflow-y-auto text-white/80">
-                {selectedStation ? (
-                  <StationPanel
-                    selectedStation={selectedStation}
-                    onClose={() => {
-                      setShowStationPanel(false);
-                      setPanelHeight(0);
-                    }}
-                    onStationClick={handleStationClick}
-                    stationSequences={stationSequences}
-                    isDarkTheme={true}
-                    onBackToLine={handleBackToLine}
-                    showBackButton={cameFromLine}
-                    onLineClick={handleLineClickFromStation}
-                  />
+                {showMobileNearestStationsPanel ? ( // Only check showMobileNearestStationsPanel
+                    <NearestStationsPanel
+                     nearestStations={nearestStations}
+                     onClose={() => { // Use existing closeNearestStationsPanel for logic
+                       closeNearestStationsPanel();
+                       // closeNearestStationsPanel now handles hiding the mobile wrapper
+                     }}
+                     onStationClick={handleStationClick}
+                    />
+                ) : selectedStation ? (
+                    <StationPanel
+                      selectedStation={selectedStation}
+                      onClose={() => {
+                        setShowStationPanel(false);
+                        setPanelHeight(0);
+                      }}
+                      onStationClick={handleStationClick}
+                      stationSequences={stationSequences}
+                      isDarkTheme={true}
+                      onBackToLine={handleBackToLine}
+                      showBackButton={cameFromLine}
+                      onLineClick={handleLineClickFromStation}
+                    />
                 ) : selectedLine ? (
-                  <LinePanel
-                    selectedLine={selectedLine}
-                    onClose={() => {
-                      setShowStationPanel(false);
-                      setPanelHeight(0);
-                    }}
-                    stationSequences={stationSequences}
-                    isDarkTheme={true}
-                    onStationClick={handleLinePanelStationClick}
-                    cameFromStation={cameFromStation}
-                    onBackToStation={handleBackToStation}
-                  />
+                    <LinePanel
+                      selectedLine={selectedLine}
+                      onClose={() => {
+                        setShowStationPanel(false);
+                        setPanelHeight(0);
+                      }}
+                      stationSequences={stationSequences}
+                      isDarkTheme={true}
+                      onStationClick={handleLinePanelStationClick}
+                      cameFromStation={cameFromStation}
+                      onBackToStation={handleBackToStation}
+                    />
                 ) : null}
               </div>
             )}
@@ -1277,10 +1384,8 @@ const MapComponent = () => {
       )}
 
       {/* Nearest Stations Panel (Mobile and Desktop) */}
-      {showNearestStationsPanel && (
-        <div className={`fixed inset-x-0 bottom-0 z-50 md:inset-y-0 md:left-auto md:right-0 md:w-96 md:max-w-sm bg-black/95 backdrop-blur-sm border-t border-white/10 md:border-t-0 md:border-l`}>
-            {/* We will add content here in the next step */}
-            {/* For now, just a placeholder with a close button */}
+      {showNearestStationsPanel && ( // This block is ONLY for Desktop
+          <div className={`fixed inset-x-0 bottom-0 z-50 md:inset-y-0 md:left-auto md:right-0 md:w-96 md:max-w-sm bg-black/95 backdrop-blur-sm border-t border-white/10 md:border-t-0 md:border-l`}>
              <div className="w-full h-12 flex items-center justify-between px-4 bg-black/50 border-b border-white/10">
               <div className="text-lg font-medium text-white">Nearest Stations</div>
               <button

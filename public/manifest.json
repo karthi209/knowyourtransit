@@ -1,0 +1,41 @@
+{
+  "short_name": "TransitApp",
+  "name": "Chennai Transit Map",
+  "icons": [
+    {
+      "src": "/icons/icon-192x192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#111827",
+  "background_color": "#111827",
+  "description": "Chennai Transit Map - Your guide to Chennai's public transportation",
+  "categories": ["travel", "navigation", "transportation"],
+  "screenshots": [
+    {
+      "src": "/screenshots/screenshot1.png",
+      "sizes": "1080x1920",
+      "type": "image/png"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Find Nearest Station",
+      "short_name": "Nearby",
+      "description": "Find stations near your location",
+      "url": "/?action=nearby",
+      "icons": [{ "src": "/icons/nearby.png", "sizes": "192x192" }]
+    }
+  ]
+} 

@@ -64,6 +64,9 @@ const MapComponent = () => {
   const radiusSourceRef = useRef(null); // Ref for radius circles vector source
   const radiusLayerRef = useRef(null); // Ref for radius circles vector layer
 
+  // State to track if fullscreen has been requested
+  const [fullscreenRequested, setFullscreenRequested] = useState(false);
+
   useEffect(() => {
     if (mapInstanceRef.current) return; // Ensure map is only initialized once
 
@@ -384,22 +387,39 @@ const MapComponent = () => {
   }, [selectedLine]);
 
   const handleTouchStart = (e) => {
+    // Add haptic feedback if available
+    if (window.navigator.vibrate) {
+      window.navigator.vibrate(10);
+    }
     setIsDragging(true);
     setStartY(e.touches[0].clientY);
     setCurrentY(e.touches[0].clientY);
+    e.preventDefault();
   };
 
   const handleTouchMove = (e) => {
     if (!isDragging) return;
+    e.preventDefault();
     const newY = e.touches[0].clientY;
     setCurrentY(newY);
     
     const deltaY = newY - startY;
-    // Allow dragging down to 40px height and up to 60% of screen height
-    const newHeight = Math.max(40, Math.min(window.innerHeight * 0.6, window.innerHeight * 0.6 - deltaY));
-    setPanelHeight(newHeight);
+    // Add resistance when dragging past limits
+    const resistance = 0.3;
+    let newHeight;
     
-    // Optional: Trigger a map render or update
+    if (deltaY > 0) { // Dragging down
+      const maxHeight = window.innerHeight * 0.6;
+      const overflow = deltaY - maxHeight;
+      newHeight = maxHeight + (overflow > 0 ? overflow * resistance : 0);
+    } else { // Dragging up
+      const minHeight = 40;
+      const overflow = minHeight - (window.innerHeight * 0.6 - deltaY);
+      newHeight = minHeight - (overflow > 0 ? overflow * resistance : 0);
+    }
+    
+    setPanelHeight(Math.max(40, Math.min(window.innerHeight * 0.6, newHeight)));
+    
     if (mapInstanceRef.current) {
       mapInstanceRef.current.renderSync();
     }
@@ -407,24 +427,33 @@ const MapComponent = () => {
 
   const handleTouchEnd = () => {
     setIsDragging(false);
-    // If dragged down more than 100px or more than 30% of the panel height, minimize it
     const dragDistance = currentY - startY;
     const threshold = Math.min(100, window.innerHeight * 0.6 * 0.3);
     
+    // Add haptic feedback for panel snap
+    if (window.navigator.vibrate) {
+      window.navigator.vibrate(5);
+    }
+    
     if (dragDistance > threshold) {
-      // Minimize to 40px height instead of hiding completely
       setPanelHeight(40);
     } else {
-      // Snap back to full height
       setPanelHeight(window.innerHeight * 0.6);
     }
     
-    // Optional: Trigger a map render or update after drag ends
     if (mapInstanceRef.current) {
-      mapInstanceRef.current.updateSize(); // Update map size after panel height change
+      mapInstanceRef.current.updateSize();
       mapInstanceRef.current.renderSync();
     }
   };
+
+  // Add smooth scroll behavior for mobile panels
+  useEffect(() => {
+    const panelContent = document.querySelector('.panel-content');
+    if (panelContent) {
+      panelContent.style.scrollBehavior = 'smooth';
+    }
+  }, []);
 
   const handleStationClick = (feature, fromLinePanel = false) => {
     const properties = feature.getProperties();
@@ -1209,10 +1238,27 @@ const MapComponent = () => {
     }
   }, [userLocation]);
 
+  // Handle first interaction to request fullscreen - Removed direct listeners
+  // Function will be called after welcome animation
+  const handleFirstInteraction = () => {
+    if (!fullscreenRequested && mapContainerRef.current) {
+      console.log("Attempting to request fullscreen.");
+      mapContainerRef.current.requestFullscreen().catch(err => {
+        console.error(`Error attempting to enable fullscreen: ${err.message}`);
+      });
+      setFullscreenRequested(true);
+    }
+  };
+
   return (
-    <div className={`map-container ${isDarkTheme ? 'dark-theme' : ''} ${isFullscreen ? 'fullscreen' : ''}`}>
+    <div className={`map-container ${isDarkTheme ? 'dark-theme' : ''} ${isFullscreen ? 'fullscreen' : ''}`}
+         onClick={handleFirstInteraction}
+         onTouchStart={handleFirstInteraction}
+    >
       {showWelcome && (
-        <WelcomeAnimation onAnimationComplete={() => setShowWelcome(false)} />
+        <WelcomeAnimation onAnimationComplete={() => {
+          setShowWelcome(false);
+        }} />
       )}
       <div id="map" className="map" ref={mapContainerRef}></div>
       <SearchBar 
@@ -1232,7 +1278,7 @@ const MapComponent = () => {
             transition: 'transform 0.3s ease-out'
           }}
         >
-          <div className="h-full flex flex-col bg-black/95 backdrop-blur-sm border-l border-white/10">
+          <div className="h-full flex flex-col bg-black/95 backdrop-blur-sm border-l border-white/10 select-none">
             {/* Header with logo and close button */}
             <div className="w-full h-12 flex items-center justify-between px-4 bg-black/50 border-b border-white/10">
               <div className="flex items-center gap-2">
@@ -1245,14 +1291,14 @@ const MapComponent = () => {
                     overlayRef.current.setPosition(undefined);
                   }
                 }}
-                className="p-2 rounded-full hover:bg-white/10 transition-colors"
+                className="p-2 rounded-full hover:bg-white/10 transition-colors select-none"
               >
                 <span className="material-icons text-white/60">close</span>
               </button>
       </div>
 
             {/* Panel content */}
-            <div className="flex-1 overflow-y-auto text-white/80">
+            <div className="flex-1 overflow-y-auto text-white/80 hide-scrollbar">
               <StationPanel
                 selectedStation={selectedStation}
                 onClose={() => {
@@ -1285,20 +1331,20 @@ const MapComponent = () => {
         >
           <div className="h-full flex flex-col bg-black/95 backdrop-blur-sm border-l border-white/10">
             {/* Header with logo and close button */}
-            <div className="w-full h-12 flex items-center justify-between px-4 bg-black/50 border-b border-white/10">
+            <div className="w-full h-12 flex items-center justify-between px-4 bg-black/50 border-b border-white/10 select-none">
               <div className="flex items-center gap-2">
                 <div className="text-lg font-medium text-white">Line Details</div>
               </div>
               <button 
                 onClick={() => setSelectedLineState(null)}
-                className="p-2 rounded-full hover:bg-white/10 transition-colors"
+                className="p-2 rounded-full hover:bg-white/10 transition-colors select-none"
               >
                 <span className="material-icons text-white/60">close</span>
               </button>
             </div>
 
             {/* Panel content */}
-            <div className="flex-1 overflow-y-auto text-white/80">
+            <div className="flex-1 overflow-y-auto text-white/80 hide-scrollbar">
               <LinePanel
                 selectedLine={selectedLine}
                 onClose={() => setSelectedLineState(null)}
@@ -1317,10 +1363,10 @@ const MapComponent = () => {
       {showStationPanel && (
         <div
           ref={panelRef}
-          className="fixed inset-x-0 bottom-0 z-50 md:hidden"
+          className="fixed inset-x-0 bottom-0 z-50 md:hidden touch-action-none"
           style={{
             height: `${panelHeight}px`,
-            transition: isDragging ? 'none' : 'height 0.3s ease-out',
+            transition: isDragging ? 'none' : 'height 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
             backgroundColor: 'transparent'
           }}
         >
@@ -1332,9 +1378,9 @@ const MapComponent = () => {
               flexDirection: 'column'
             }}
           >
-            {/* Drag handle with logo */}
+            {/* Drag handle with improved touch target */}
             <div
-              className="w-full h-16 flex items-center justify-between px-4 cursor-grab active:cursor-grabbing touch-none bg-black/50 border-b border-white/10 rounded-t-2xl"
+              className="w-full h-16 flex items-center justify-between px-4 cursor-grab active:cursor-grabbing touch-none bg-gray-900/95 border-b border-gray-700/50 rounded-t-2xl select-none"
               onTouchStart={handleTouchStart}
               onTouchMove={handleTouchMove}
               onTouchEnd={handleTouchEnd}
@@ -1344,12 +1390,12 @@ const MapComponent = () => {
                   {showMobileNearestStationsPanel ? 'Nearest Stations' : selectedStation ? 'Station Details' : selectedLine ? 'Line Details' : ''}
                 </div>
               </div>
-              <div className="w-12 h-1 bg-white/20 rounded-full"></div>
+              <div className="w-12 h-1 bg-gray-600 rounded-full"></div>
             </div>
             
-            {/* Panel content */}
+            {/* Panel content with improved touch handling */}
             {panelHeight > 40 && (
-              <div className="flex-1 overflow-y-auto text-white/80">
+              <div className="flex-1 overflow-y-auto text-white/80 touch-action-none hide-scrollbar overscroll-contain">
                 {showMobileNearestStationsPanel ? ( // Only check showMobileNearestStationsPanel
                     <NearestStationsPanel
                      nearestStations={nearestStations}
@@ -1396,11 +1442,11 @@ const MapComponent = () => {
       {/* Nearest Stations Panel (Mobile and Desktop) */}
       {showNearestStationsPanel && ( // This block is ONLY for Desktop
           <div className={`fixed inset-x-0 bottom-0 z-50 md:inset-y-0 md:left-auto md:right-0 md:w-96 md:max-w-sm bg-black/95 backdrop-blur-sm border-t border-white/10 md:border-t-0 md:border-l`}>
-             <div className="w-full h-12 flex items-center justify-between px-4 bg-black/50 border-b border-white/10">
+             <div className="w-full h-12 flex items-center justify-between px-4 bg-black/50 border-b border-white/10 select-none">
               <div className="text-lg font-medium text-white">Nearest Stations</div>
               <button
                 onClick={closeNearestStationsPanel}
-                className="p-2 rounded-full hover:bg-white/10 transition-colors"
+                className="p-2 rounded-full hover:bg-white/10 transition-colors select-none"
               >
                 <span className="material-icons text-white/60">close</span>
               </button>
@@ -1419,14 +1465,14 @@ const MapComponent = () => {
         {/* Geolocation Button */}
         <button
           onClick={locateUser}
-          className="map-control-button"
+          className="map-control-button select-none"
           title="Locate me"
         >
           <span className="material-icons">my_location</span>
         </button>
         <button
           onClick={cycleMapStyle}
-          className="map-control-button"
+          className="map-control-button select-none"
           title={`Current: ${mapStyle.charAt(0).toUpperCase() + mapStyle.slice(1)} Map`}
         >
           <span className="material-icons">
@@ -1438,14 +1484,14 @@ const MapComponent = () => {
         </button>
         <button
           onClick={toggleFullscreen}
-          className="map-control-button"
+          className="map-control-button select-none"
           title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
         >
           <span className="material-icons">{isFullscreen ? 'fullscreen_exit' : 'fullscreen'}</span>
         </button>
         <button
           onClick={() => document.querySelector('.ol-rotate button').click()}
-          className="map-control-button"
+          className="map-control-button select-none"
           title="Reset rotation"
         >
           <span className="material-icons">navigation</span>
@@ -1464,7 +1510,7 @@ const MapComponent = () => {
           overflow: hidden;
           touch-action: none;
           font-family: "Cabin", "Noto Sans Tamil", serif;
-          background-color: #000;
+          background-color: transparent;
           color: rgba(255, 255, 255, 0.9);
         }
 
@@ -1507,8 +1553,8 @@ const MapComponent = () => {
         }
 
         .map-control-button {
-          background-color: rgba(0, 0, 0, 0.8);
-          border: 1px solid rgba(255, 255, 255, 0.1);
+          background-color: rgba(17, 24, 39, 0.95); /* bg-gray-900 */
+          border: 1px solid rgba(75, 85, 99, 0.5); /* border-gray-700/50 */
           border-radius: 8px;
           width: 40px;
           height: 40px;
@@ -1528,13 +1574,23 @@ const MapComponent = () => {
         }
 
         .map-control-button:hover {
-          background-color: rgba(0, 0, 0, 0.9);
-          border-color: rgba(255, 255, 255, 0.2);
+          background-color: rgba(168, 85, 247, 0.1); /* purple-400 with opacity */
+          border-color: rgba(168, 85, 247, 1); /* purple-400 */
           transform: translateY(-1px);
         }
 
         .map-control-button:active {
           transform: translateY(0);
+        }
+
+        /* Hide scrollbar for specific elements */
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none; /* Safari and Chrome */
+        }
+
+        .hide-scrollbar {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
         }
 
         /* Mobile-specific styles */
@@ -1578,6 +1634,18 @@ const MapComponent = () => {
 
         ::-webkit-scrollbar-thumb:hover {
           background: rgba(255, 255, 255, 0.3);
+        }
+
+        /* Panel styles */
+        .panel-header {
+          background-color: rgba(17, 24, 39, 0.95); /* bg-gray-900 */
+          backdrop-filter: blur(8px);
+          border-bottom: 1px solid rgba(75, 85, 99, 0.5); /* border-gray-700/50 */
+        }
+
+        .panel-content {
+          background-color: rgba(17, 24, 39, 0.95); /* bg-gray-900 */
+          backdrop-filter: blur(8px);
         }
       `}</style>
     </div>

@@ -15,37 +15,22 @@ export const getStationStyle = (feature, mapInstance) => {
   const zoomLevel = mapInstance.getView().getZoom() || 10;
   const styles = [];
 
-  // Zoom levels:
-  // < 13: Only lines visible
-  // 13-14: Circles visible
-  // > 14: Metro icons visible
+  // Show circles at appropriate zoom levels (e.g., 13+)
+  if (zoomLevel >= 13) { // Show circles from zoom 13 onwards
+    // Adjust size based on zoom for better visibility
+    const circleRadius = Math.max(3, Math.min(8, (zoomLevel - 12) * 2)); // Example: radius 3 at zoom 13, 5 at zoom 14, 7 at zoom 15 etc., max 8
 
-  // Show circles between zoom 13-14
-  if (zoomLevel >= 13 && zoomLevel < 14) {
-    const circleSize = easeOutScale(zoomLevel, 13, 14, 1.5, 2.5);
     styles.push(
       new Style({
         image: new CircleStyle({
-          radius: circleSize,
-          fill: new Fill({ color: "#ffffff" }),
-          stroke: new Stroke({ color: "#1565C0", width: 2 }), // Deep blue for contrast
-        }),
-      })
-    );
-  }
-
-  // Show metro icons at zoom 14+
-  if (zoomLevel >= 14) {
-    const iconScale = easeOutScale(zoomLevel, 14, 16, 0.05, 0.3);
-    const opacity = easeOutScale(zoomLevel, 14, 14.5, 0, 1);
-
-    styles.push(
-      new Style({
-        image: new Icon({
-          src: "st_icon.png",
-          scale: iconScale,
-          opacity: opacity,
-          anchor: [0.5, 0.5],
+          radius: circleRadius,
+          fill: new Fill({
+            color: 'rgba(168, 85, 247, 0.6)', // Use purple with some opacity for fill
+          }),
+          stroke: new Stroke({
+            color: 'rgba(255, 255, 255, 0.8)', // Use white with some opacity for stroke
+            width: 2,
+          }),
         }),
       })
     );

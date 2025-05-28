@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="uuid-b152ae2d-d849-416e-bcd0-636024c58acc" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" width="83.73" height="83.8" viewBox="0 0 83.73 83.8">
+  <defs>
+    <style>
+      .uuid-60c859fd-9807-4b99-a1ab-c99f5c75f254 {
+        fill: #324d75;
+        font-family: Parchment-Regular, Parchment;
+        font-size: 69px;
+        stroke: #324d75;
+        stroke-miterlimit: 10;
+      }
+
+      .uuid-cec04d7f-9f33-483b-b3de-f28f06139d51 {
+        fill: #f7f7f7;
+      }
+    </style>
+  </defs>
+  <circle class="uuid-cec04d7f-9f33-483b-b3de-f28f06139d51" cx="41.86" cy="41.97" r="41.59"/>
+  <text class="uuid-60c859fd-9807-4b99-a1ab-c99f5c75f254" transform="translate(11.85 56.58)"><tspan x="0" y="0">P</tspan></text>
+</svg>

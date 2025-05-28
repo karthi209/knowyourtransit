@@ -1,9 +1,143 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 :root {
+  --primary-color: #a855f7;
+  --secondary-color: #ec4899;
+  --background-color: #111827;
+  --text-color: rgba(255, 255, 255, 0.9);
   font-family: "Cabin", "Noto Sans Tamil", serif;
   font-weight: 400;
 }
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+* {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  position: fixed;
+  touch-action: none;
+  overscroll-behavior-y: contain;
+  background-color: var(--background-color);
+  color: var(--text-color);
+  font-family: "Cabin", "Noto Sans Tamil", sans-serif;
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Mobile-optimized scrollbars */
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Touch-optimized buttons */
+button, 
+[role="button"],
+.map-control-button {
+  min-height: 44px;
+  min-width: 44px;
+  touch-action: manipulation;
+}
+
+/* Smooth transitions */
+.transition-all {
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+/* Mobile-safe areas */
+@supports (padding: max(0px)) {
+  .safe-area-top {
+    padding-top: max(env(safe-area-inset-top), 1rem);
+  }
+  
+  .safe-area-bottom {
+    padding-bottom: max(env(safe-area-inset-bottom), 1rem);
+  }
+  
+  .safe-area-left {
+    padding-left: max(env(safe-area-inset-left), 1rem);
+  }
+  
+  .safe-area-right {
+    padding-right: max(env(safe-area-inset-right), 1rem);
+  }
+}
+
+/* Loading states */
+.loading {
+  position: relative;
+  overflow: hidden;
+}
+
+.loading::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.1),
+    transparent
+  );
+  animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Active states for touch */
+.active\:scale-95:active {
+  transform: scale(0.95);
+}
+
+/* Prevent text selection */
+.select-none {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Smooth scrolling */
+.smooth-scroll {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Prevent pull-to-refresh */
+.overscroll-contain {
+  overscroll-behavior-y: contain;
+}
+
+/* Prevent zoom on double tap */
+* {
+  touch-action: manipulation;
+}
 

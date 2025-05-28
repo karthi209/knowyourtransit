@@ -7,7 +7,7 @@ export default defineConfig(({ mode }) => {
     base: '/',  // This should be fine for both production and dev (as both are served from the root)
     server: {
       host: '0.0.0.0',  // Allow external access for local dev
-      port: 5174,        // Port for local dev server
+      port: 5173,        // Port for local dev server
       strictPort: true,  // Prevent auto-port switching
     },
     define: {

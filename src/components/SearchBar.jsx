@@ -207,19 +207,17 @@ const SearchBar = ({ onStationSelect, onLineSelect, isDarkTheme }) => {
             value={query}
             onChange={(e) => handleSearch(e.target.value)}
             placeholder="Search stations or lines..."
-            className="w-full h-12 pl-12 pr-4 rounded-lg bg-black/80 backdrop-blur-sm border border-white/10 text-white placeholder-white/40 focus:outline-none focus:border-white/20 transition-colors"
+            className="w-full h-12 pl-12 pr-4 rounded-lg bg-gray-900/95 backdrop-blur-sm border border-gray-700/50 text-white placeholder-gray-400 focus:outline-none focus:border-purple-400 focus:ring-1 focus:ring-purple-400/20 transition-colors"
           />
-          <span className="material-icons absolute left-4 top-1/2 transform -translate-y-1/2 text-white/40">
-            search
-          </span>
+          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
         </div>
 
         {showResults && results.length > 0 && (
-          <div className="absolute w-full mt-2 rounded-lg bg-black/90 backdrop-blur-sm border border-white/10 shadow-lg overflow-hidden">
+          <div className="absolute w-full mt-2 rounded-lg bg-gray-900/95 backdrop-blur-sm border border-gray-700/50 shadow-lg overflow-hidden">
             {results.map((result, index) => (
               <div
                 key={index}
-                className="px-4 py-3 hover:bg-white/5 cursor-pointer transition-colors border-b border-white/5 last:border-b-0"
+                className="px-4 py-3 hover:bg-purple-400/10 cursor-pointer transition-colors border-b border-gray-700/50 last:border-b-0"
                 onClick={() => {
                   if (result.type === 'station') {
                     onStationSelect(result);
@@ -249,7 +247,7 @@ const SearchBar = ({ onStationSelect, onLineSelect, isDarkTheme }) => {
                   )}
                   <div>
                     <div className="text-white/90 font-medium">{result.name}</div>
-                    <div className="text-white/40 text-sm">
+                    <div className="text-gray-400 text-sm">
                       {result.type === 'station' ? 'Station' : 'Line'}
                     </div>
                   </div>
@@ -260,16 +258,131 @@ const SearchBar = ({ onStationSelect, onLineSelect, isDarkTheme }) => {
         )}
       </div>
 
-      <style jsx>{`
-        @import url('https://fonts.googleapis.com/icon?family=Material+Icons');
-        @import url('https://fonts.googleapis.com/css2?family=Cabin:wght@400;500;600;700&family=Noto+Sans+Tamil:wght@400;500;600;700&display=swap');
-
-        input {
-          font-family: "Cabin", "Noto Sans Tamil", serif;
+      <style jsx="true">{`
+        .search-container {
+          position: fixed;
+          top: 1rem;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 90%;
+          max-width: 600px;
+          z-index: 1000;
         }
 
-        input::placeholder {
-          font-family: "Cabin", "Noto Sans Tamil", serif;
+        .search-input-container {
+          position: relative;
+          background-color: rgba(17, 24, 39, 0.95); /* bg-gray-900 */
+          backdrop-filter: blur(8px);
+          border: 1px solid rgba(75, 85, 99, 0.5); /* border-gray-700/50 */
+          border-radius: 0.75rem;
+          transition: all 0.2s ease;
+        }
+
+        .search-input-container:focus-within {
+          border-color: rgba(168, 85, 247, 1); /* purple-400 */
+          box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.1); /* purple-400 with opacity */
+        }
+
+        .search-input {
+          width: 100%;
+          padding: 0.75rem 1rem 0.75rem 2.5rem;
+          background: transparent;
+          border: none;
+          color: rgba(255, 255, 255, 0.9);
+          font-size: 1rem;
+          outline: none;
+        }
+
+        .search-input::placeholder {
+          color: rgba(156, 163, 175, 1); /* text-gray-400 */
+        }
+
+        .search-icon {
+          position: absolute;
+          left: 0.75rem;
+          top: 50%;
+          transform: translateY(-50%);
+          color: rgba(156, 163, 175, 1); /* text-gray-400 */
+        }
+
+        .search-results {
+          position: absolute;
+          top: calc(100% + 0.5rem);
+          left: 0;
+          right: 0;
+          background-color: rgba(17, 24, 39, 0.95); /* bg-gray-900 */
+          backdrop-filter: blur(8px);
+          border: 1px solid rgba(75, 85, 99, 0.5); /* border-gray-700/50 */
+          border-radius: 0.75rem;
+          max-height: 400px;
+          overflow-y: auto;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        .result-item {
+          padding: 0.75rem 1rem;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          border-bottom: 1px solid rgba(75, 85, 99, 0.5); /* border-gray-700/50 */
+        }
+
+        .result-item:last-child {
+          border-bottom: none;
+        }
+
+        .result-item:hover {
+          background-color: rgba(168, 85, 247, 0.1); /* purple-400 with opacity */
+        }
+
+        .result-item.active {
+          background-color: rgba(168, 85, 247, 0.1); /* purple-400 with opacity */
+        }
+
+        .result-name {
+          font-weight: 500;
+          color: rgba(255, 255, 255, 0.9);
+        }
+
+        .result-details {
+          font-size: 0.875rem;
+          color: rgba(156, 163, 175, 1); /* text-gray-400 */
+        }
+
+        .result-type {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.25rem;
+          padding: 0.25rem 0.5rem;
+          border-radius: 9999px;
+          font-size: 0.75rem;
+          font-weight: 500;
+          background-color: rgba(31, 41, 55, 0.6); /* bg-gray-800/60 */
+          color: rgba(168, 85, 247, 1); /* purple-400 */
+        }
+
+        .no-results {
+          padding: 1rem;
+          text-align: center;
+          color: rgba(156, 163, 175, 1); /* text-gray-400 */
+        }
+
+        /* Scrollbar styling */
+        .search-results::-webkit-scrollbar {
+          width: 8px;
+        }
+
+        .search-results::-webkit-scrollbar-track {
+          background: rgba(31, 41, 55, 0.6); /* bg-gray-800/60 */
+          border-radius: 4px;
+        }
+
+        .search-results::-webkit-scrollbar-thumb {
+          background: rgba(75, 85, 99, 0.5); /* border-gray-700/50 */
+          border-radius: 4px;
+        }
+
+        .search-results::-webkit-scrollbar-thumb:hover {
+          background: rgba(168, 85, 247, 0.5); /* purple-400 with opacity */
         }
       `}</style>
     </div>

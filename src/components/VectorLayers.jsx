@@ -48,7 +48,7 @@ export const createVectorLayerLines = (selectedLine = null) => {
 };
 
 export const vectorLayerStationLayouts = new VectorLayer({
-  source: createVectorSource("/data/stationLayouts.geojson"),
+  source: createVectorSource("/data/stationLayout.geojson"),
   style: stationLayoutStyle,
 });
 

@@ -1,1 +1,1 @@
-frontend=v0.0.2
+frontend=v0.0.3
